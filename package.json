@@ -5,7 +5,7 @@
   "dependencies": {
     "expo": "~50.0.14",
     "expo-image-picker": "~14.7.1",
-    "expo-print": "~12.7.1",
+    "expo-print": "~12.8.1",
     "expo-sharing": "~11.10.0",
     "expo-asset": "~9.0.2",
     "expo-file-system": "~16.0.8",
