@@ -20,8 +20,17 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: 📦 Install dependencies
-        # This command forces the install even if there are small conflicts
         run: npm install --legacy-peer-deps
 
       - name: 🚀 Build APK Locally
         run: npx eas-cli build --platform android --profile production --local --non-interactive
+
+      - name: 🔍 Find and Rename APK
+        # This part looks for any .apk file and renames it to a simple name
+        run: find . -name "*.apk" -exec mv {} sba-app.apk \;
+
+      - name: 📤 Upload APK for Download
+        uses: actions/upload-artifact@v4
+        with:
+          name: SBA-Accounts-App
+          path: sba-app.apk
