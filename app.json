@@ -7,13 +7,9 @@
     "icon": "./icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A192F",
-    "splash": {
-      "image": "./icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A192F"
-    },
     "android": {
       "package": "com.sba.audit.app",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./icon.png",
