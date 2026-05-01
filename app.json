@@ -6,6 +6,12 @@
     "orientation": "portrait",
     "icon": "./icon.png",
     "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A192F",
+    "splash": {
+      "image": "./icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A192F"
+    },
     "android": {
       "package": "com.sba.audit.app",
       "versionCode": 1,
