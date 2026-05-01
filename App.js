@@ -18,7 +18,7 @@ export default function App() {
   const [mR, setMR] = useState('22800');
   const [wP, setWP] = useState([]);
   const [mP, setMP] = useState([]);
-  const [pT, setPT] = useState('Water'); 
+  const [pT, setPT] = useState('Water');
   const [f, setF] = useState(''); const [a, setA] = useState(''); const [m, setM] = useState('');
   const [v, setV] = useState(''); const [amt, setAmt] = useState(''); const [rem, setRem] = useState('');
   const [img, setImg] = useState(null);
@@ -49,38 +49,15 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.co}>
-      <View style={styles.he}>
-        <Image source={require('./icon.png')} style={styles.lo} />
-        <View style={{flex:1}}><Text style={styles.ti}>SAI BRUNDAVAN</Text><Text style={styles.su}>APARTMENT ASSOCIATION</Text></View>
-        <TouchableOpacity onPress={doOut} style={styles.bt}><Share2 color="#FFD700" size={20}/></TouchableOpacity>
-      </View>
-      
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.ro}><Text style={styles.lb}>Month:</Text><TextInput style={styles.mI} value={mon} onChangeText={setMon}/></View>
-        <View style={styles.ca}>
-          <Text style={styles.ct}>Accounting Setup</Text>
-          <Text style={styles.sl}>Opening Balance (A)</Text><TextInput style={styles.in} keyboardType="numeric" value={oB} onChangeText={setOpening}/>
-          <Text style={styles.sl}>Water tankers received (A1)</Text><TextInput style={styles.in} keyboardType="numeric" value={wR} onChangeText={setWR}/>
-          <TouchableOpacity style={styles.ad} onPress={()=>{setPT('Water');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={styles.at}>Add Pending Water</Text></TouchableOpacity>
-          <Text style={styles.sl}>Maintenance Total (B)</Text><TextInput style={styles.in} keyboardType="numeric" value={mR} onChangeText={setMR}/>
-          <TouchableOpacity style={styles.ad} onPress={()=>{setPT('Maintenance');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={styles.at}>Add Pending Maintenance</Text></TouchableOpacity>
-        </View>
-        <View style={styles.sm}><Text style={{color:'#8892b0'}}>Closing Balance (E)</Text><Text style={styles.am}>₹{(tI - tE).toLocaleString()}</Text></View>
-        <Text style={styles.st}>Expenditure Ledger</Text>
-        {ex.map((e,i)=>(<View key={e.id} style={styles.it}><View style={{flex:1}}><Text style={{color:'#fff'}}>{i+1}. {e.vendor}</Text><Text style={{color:'#8892b0',fontSize:10}}>{e.date}</Text></View><Text style={{color:'#FFD700',fontWeight:'bold'}}>₹{e.amount}</Text><TouchableOpacity onPress={()=>setEx(ex.filter(x=>x.id!==e.id))}><Trash2 size={16} color="#f87171" style={{marginLeft:10}}/></TouchableOpacity></View>))}
-        <View style={{height:150}}/>
-      </ScrollView>
-
-      <View style={styles.fo}>
-        <View style={styles.ac}><TouchableOpacity style={[styles.fb,{backgroundColor:'#1d2d50'}]} onPress={()=>{setImg(null);setMV(true)}}><Plus color="#FFD700"/></TouchableOpacity><Text style={styles.fl}>Add manually</Text></View>
-        <View style={styles.ac}><TouchableOpacity style={styles.fb} onPress={scan}><Camera color="#0A192F"/></TouchableOpacity><Text style={styles.fl}>Capture bills</Text></View>
-      </View>
-
-      <Modal visible={pMV} transparent={true}><View style={styles.ov}><View style={styles.mc}><Text style={{color:'#FFD700',fontWeight:'bold',marginBottom:10}}>{pT} Pending</Text><TextInput placeholder="Flat No" placeholderTextColor="#8892b0" style={styles.mi} value={f} onChangeText={setF}/><TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.mi} value={a} onChangeText={setA}/><TextInput placeholder="Month" placeholderTextColor="#8892b0" style={styles.mi} value={m} onChangeText={setM}/><TouchableOpacity style={styles.sb} onPress={()=>{const n={id:Date.now(),flat:f,amt:a,mon:m};pT==='Water'?setWP([...wP,n]):setMP([...mP,n]);setF('');setA('');setPMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Save</Text></TouchableOpacity><TouchableOpacity onPress={()=>setPMV(false)} style={styles.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity></View></View></Modal>
-      
-      <Modal visible={mV} transparent={true} animationType="slide"><View style={styles.ov}><View style={styles.mc}><View style={styles.ai}><Sparkles color="#FFD700" size={14}/><Text style={{color:'#FFD700',fontSize:10,marginLeft:5,flex:1}}>Verify auto-captured details.</Text></View><View style={styles.mh}><Text style={{color:'#fff',fontWeight:'bold'}}>Entry</Text><TouchableOpacity onPress={()=>setMV(false)}><X color="#fff"/></TouchableOpacity></View>{img && <Image source={{uri:img}} style={{width:'100%',height:120,borderRadius:10,marginBottom:10}}/>}<TextInput placeholder="Particulars" placeholderTextColor="#8892b0" style={styles.mi} value={v} onChangeText={setV}/><TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.mi} value={amt} onChangeText={setAmt}/><TextInput placeholder="Remarks" placeholderTextColor="#8892b0" style={styles.mi} value={rem} onChangeText={setRem}/><TouchableOpacity style={styles.sb} onPress={()=>{setEx([{id:Date.now(),vendor:v,amount:parseInt(amt)||0,remarks:rem,date:new Date().toLocaleDateString('en-IN')},...ex]);setMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Verify & Save</Text></TouchableOpacity><TouchableOpacity onPress={()=>setMV(false)} style={styles.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity></View></View></Modal>
-      
-      {isP && <View style={styles.ol}><ActivityIndicator size="large" color="#FFD700"/><Text style={{color:'#fff',marginTop:10}}>AI Scanning...</Text></View>}
+      <View style={styles.he}><Image source={require('./icon.png')} style={styles.lo} /><View style={{flex:1}}><Text style={styles.ti}>SAI BRUNDAVAN</Text><Text style={styles.su}>APARTMENT ASSOCIATION</Text></View><TouchableOpacity onPress={doOut} style={styles.bt}><Share2 color="#FFD700" size={20}/></TouchableOpacity></View>
+      <ScrollView showsVerticalScrollIndicator={false}><View style={styles.ro}><Text style={styles.lb}>Month:</Text><TextInput style={styles.mI} value={mon} onChangeText={setMon}/></View><View style={styles.ca}>
+        <Text style={styles.ct}>Accounting Setup</Text><Text style={styles.sl}>Opening Bal (A)</Text><TextInput style={styles.in} keyboardType="numeric" value={oB} onChangeText={setOpening}/><Text style={styles.sl}>Water tankers (A1)</Text><TextInput style={styles.in} keyboardType="numeric" value={wR} onChangeText={setWR}/><TouchableOpacity style={styles.ad} onPress={()=>{setPT('Water');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={styles.at}>Add Pending Water</Text></TouchableOpacity><Text style={styles.sl}>Maintenance (B)</Text><TextInput style={styles.in} keyboardType="numeric" value={mR} onChangeText={setMR}/><TouchableOpacity style={styles.ad} onPress={()=>{setPT('Maintenance');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={styles.at}>Add Pending Maintenance</Text></TouchableOpacity></View><View style={styles.sm}><Text style={{color:'#8892b0'}}>Closing Balance (E)</Text><Text style={styles.am}>₹{(tI - tE).toLocaleString()}</Text></View>
+        <Text style={styles.st}>Expenditure Ledger</Text>{ex.map((e,i)=>(<View key={e.id} style={styles.it}><View style={{flex:1}}><Text style={{color:'#fff'}}>{i+1}. {e.vendor}</Text><Text style={{color:'#8892b0',fontSize:10}}>{e.date}</Text></View><Text style={{color:'#FFD700',fontWeight:'bold'}}>₹{e.amount}</Text><TouchableOpacity onPress={()=>setEx(ex.filter(x=>x.id!==e.id))}><Trash2 size={16} color="#f87171" style={{marginLeft:10}}/></TouchableOpacity></View>))}
+        <View style={{height:150}}/></ScrollView>
+      <View style={styles.fo}><View style={styles.ac}><TouchableOpacity style={[styles.fb,{backgroundColor:'#1d2d50'}]} onPress={()=>{setImg(null);setMV(true)}}><Plus color="#FFD700"/></TouchableOpacity><Text style={styles.fl}>Add manually</Text></View><View style={styles.ac}><TouchableOpacity style={styles.fb} onPress={scan}><Camera color="#0A192F"/></TouchableOpacity><Text style={styles.fl}>Capture bills</Text></View></View>
+      <Modal visible={pMV} transparent={true} animationType="fade"><View style={styles.ov}><View style={styles.mc}><Text style={{color:'#FFD700',fontWeight:'bold',marginBottom:10}}>{pT} Pending</Text><TextInput placeholder="Flat No" placeholderTextColor="#8892b0" style={styles.mi} value={f} onChangeText={setF}/><TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.mi} value={a} onChangeText={setA}/><TextInput placeholder="Month" placeholderTextColor="#8892b0" style={styles.mi} value={m} onChangeText={setM}/><TouchableOpacity style={styles.sb} onPress={()=>{const n={id:Date.now(),flat:f,amt:a,mon:m};pT==='Water'?setWP([...wP,n]):setMP([...mP,n]);setF('');setA('');setPMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Save</Text></TouchableOpacity><TouchableOpacity onPress={()=>setPMV(false)} style={styles.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity></View></View></Modal>
+      <Modal visible={mV} transparent={true} animationType="slide"><View style={styles.ov}><View style={styles.mc}><View style={styles.ai}><Sparkles color="#FFD700" size={14}/><Text style={{color:'#FFD700',fontSize:10,marginLeft:5,flex:1}}>Verify details.</Text></View><View style={styles.mh}><Text style={{color:'#fff',fontWeight:'bold'}}>Entry</Text><TouchableOpacity onPress={()=>setMV(false)}><X color="#fff"/></TouchableOpacity></View>{img && <Image source={{uri:img}} style={{width:'100%',height:120,borderRadius:10,marginBottom:10}}/>}<TextInput placeholder="Particulars" placeholderTextColor="#8892b0" style={styles.mi} value={v} onChangeText={setV}/><TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.mi} value={amt} onChangeText={setAmt}/><TextInput placeholder="Remarks" placeholderTextColor="#8892b0" style={styles.mi} value={rem} onChangeText={setRem}/><TouchableOpacity style={styles.sb} onPress={()=>{setEx([{id:Date.now(),vendor:v,amount:parseInt(amt)||0,remarks:rem,date:new Date().toLocaleDateString('en-IN')},...ex]);setMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Verify & Save</Text></TouchableOpacity><TouchableOpacity onPress={()=>setMV(false)} style={styles.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity></View></View></Modal>
+      {isP && <View style={styles.ol}><ActivityIndicator size="large" color="#FFD700"/><Text style={{color:'#fff',marginTop:10}}>Scanning...</Text></View>}
     </SafeAreaView>
   );
 }
