@@ -1,14 +1,22 @@
 {
   "expo": {
     "name": "SBA Accounts",
-    "slug": "sba-accounts-tool",
+    "slug": "sba-accounts-app",
     "version": "1.0.0",
+    "orientation": "portrait",
     "icon": "./icon.png",
+    "userInterfaceStyle": "dark",
     "android": {
-      "package": "com.sba.audit.tool",
+      "package": "com.sba.audit.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./icon.png",
         "backgroundColor": "#0A192F"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "PASTE_YOUR_PROJECT_ID_HERE"
       }
     }
   }
