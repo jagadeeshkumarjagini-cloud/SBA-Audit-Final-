@@ -5,23 +5,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🏗 Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🏗 Setup Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: 🏗 Setup Expo and EAS
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
-          eas-version: latest # This was missing!
+          eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: 📦 Install dependencies
-        run: npm install
+        # This command forces the install even if there are small conflicts
+        run: npm install --legacy-peer-deps
 
       - name: 🚀 Build APK Locally
-        # We use npx to ensure the command is found
         run: npx eas-cli build --platform android --profile production --local --non-interactive
