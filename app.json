@@ -3,10 +3,19 @@
     "name": "SBA Accounts",
     "slug": "sba-audit-final-",
     "version": "1.0.0",
+    "orientation": "portrait",
     "icon": "./icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A192F",
+    "splash": {
+      "image": "./icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A192F"
+    },
     "android": {
       "package": "com.sba.audit.app",
       "versionCode": 1,
+      "backgroundColor": "#0A192F",
       "adaptiveIcon": {
         "foregroundImage": "./icon.png",
         "backgroundColor": "#0A192F"
@@ -14,7 +23,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "955b8c7f-b71d-41ce-be15-670d57c423d7" 
+        "projectId": "955b8c7f-b71d-41ce-be15-670d57c423d7"
       }
     }
   }
