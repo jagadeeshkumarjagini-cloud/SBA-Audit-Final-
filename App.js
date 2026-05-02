@@ -3,147 +3,121 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, SafeAreaVi
 import * as ImagePicker from 'expo-image-picker';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
-import { Asset } from 'expo-asset';
 import { Camera, FileText, Trash2, Plus, Sparkles, UserPlus, X, Share2, Image as ImageIcon } from 'lucide-react-native';
 
 const API_KEY = 'K81963065788957';
 
 export default function App() {
-  const [ready, setReady] = useState(false);
   const [expenses, setExpenses] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
+  const[modalVisible, setModalVisible] = useState(false);
   const [pendingModalVisible, setPendingModalVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const[ready, setReady] = useState(false);
+  const [month, setMonth] = useState(new Date().toLocaleString('default', { month: 'long', year: 'numeric' }));
   
-  // Financial Data
-  const[statementMonth, setStatementMonth] = useState(new Date().toLocaleString('default', { month: 'long', year: 'numeric' }));
-  const [openingBalance, setOpeningBalance] = useState('16725');
-  const [waterReceived, setWaterReceived] = useState('6597');
-  const[maintReceived, setMaintReceived] = useState('22800');
+  const [oB, setOB] = useState('16725');
+  const [wR, setWR] = useState('6597');
+  const [mR, setMR] = useState('22800');
+  const[wP, setWP] = useState([]);
+  const [mP, setMP] = useState([]);
+  const [pType, setPType] = useState('Water');
   
-  // Pending Dues Data
-  const [waterPendings, setWaterPendings] = useState([]);
-  const[maintPendings, setMaintPendings] = useState([]);
-  const [pendingType, setPendingType] = useState('Water'); 
-
-  // Form Data
-  const [pFlat, setPFlat] = useState(''); 
-  const[pAmount, setPAmount] = useState(''); 
-  const [pMonth, setPMonth] = useState('');
-  const [vendor, setVendor] = useState(''); 
-  const [amount, setAmount] = useState(''); 
+  const[pFlat, setPFlat] = useState('');
+  const [pAmt, setPAmt] = useState('');
+  const[pMon, setPMon] = useState('');
+  const [vendor, setVendor] = useState('');
+  const [amount, setAmount] = useState('');
   const [remarks, setRemarks] = useState('');
-  const [billDate, setBillDate] = useState(new Date().toLocaleDateString('en-IN'));
-  const [currentImage, setCurrentImage] = useState(null);
+  const [img, setImg] = useState(null);
 
-  useEffect(() => {
-    setTimeout(() => setReady(true), 1500);
-  },[]);
+  useEffect(() => { setTimeout(() => setReady(true), 1500); },[]);
 
-  // Calculations
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const totalIncome = (parseFloat(openingBalance) || 0) + (parseFloat(waterReceived) || 0) + (parseFloat(maintReceived) || 0);
-  const closingBalance = totalIncome - totalExpenses;
-  const totalWaterPending = waterPendings.reduce((s, p) => s + (parseFloat(p.amt) || 0), 0);
-  const totalMaintPending = maintPendings.reduce((s, p) => s + (parseFloat(p.amt) || 0), 0);
+  const tE = expenses.reduce((s, e) => s + e.amount, 0);
+  const tI = (parseFloat(oB) || 0) + (parseFloat(wR) || 0) + (parseFloat(mR) || 0);
+  const closingBalance = tI - tE;
+  const totWP = wP.reduce((s, p) => s + (parseFloat(p.amt) || 0), 0);
+  const totMP = mP.reduce((s, p) => s + (parseFloat(p.amt) || 0), 0);
 
-  const exportAndShare = async () => {
-    let logoBase64 = "";
+  const getHTML = () => `
+    <html>
+      <body style="font-family:Helvetica;padding:20px;color:#333;">
+        <div style="text-align:center;border-bottom:4px solid #FFD700;padding-bottom:10px;">
+          <h1 style="margin:0;color:#112240;font-size:18px;">SAI BRUNDAVAN APARTMENT ASSOCIATION</h1>
+          <p><b>ACCOUNTS STATEMENT - ${month.toUpperCase()}</b></p>
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-top:20px;">
+          <thead>
+            <tr style="background:#112240;color:white;font-size:10px;">
+              <th style="padding:10px;border:1px solid #ddd;">S.No</th>
+              <th style="padding:10px;border:1px solid #ddd;">Date</th>
+              <th style="padding:10px;border:1px solid #ddd;">Particulars</th>
+              <th style="padding:10px;border:1px solid #ddd;">Expenses</th>
+              <th style="padding:10px;border:1px solid #ddd;">Income</th>
+              <th style="padding:10px;border:1px solid #ddd;">Remarks</th>
+            </tr>
+          </thead>
+          <tbody style="font-size:10px;">
+            <tr style="background:#e6f2ff;font-weight:bold;">
+              <td style="padding:10px;border:1px solid #ddd;">A</td>
+              <td style="padding:10px;border:1px solid #ddd;">-</td>
+              <td style="padding:10px;border:1px solid #ddd;">Opening Balance (Prev Month)</td>
+              <td style="padding:10px;border:1px solid #ddd;"></td>
+              <td style="padding:10px;border:1px solid #ddd;">₹${oB}</td>
+              <td style="padding:10px;border:1px solid #ddd;">B/F</td>
+            </tr>
+            <tr style="background:#f4f8ff;">
+              <td style="padding:10px;border:1px solid #ddd;">A1</td>
+              <td style="padding:10px;border:1px solid #ddd;">-</td>
+              <td style="padding:10px;border:1px solid #ddd;">Amt received through water tankers</td>
+              <td style="padding:10px;border:1px solid #ddd;"></td>
+              <td style="padding:10px;border:1px solid #ddd;">₹${wR}</td>
+              <td style="padding:10px;border:1px solid #ddd;">Creditors</td>
+            </tr>
+            <tr style="background:#f4f8ff;">
+              <td style="padding:10px;border:1px solid #ddd;">B</td>
+              <td style="padding:10px;border:1px solid #ddd;">-</td>
+              <td style="padding:10px;border:1px solid #ddd;">Maintenance total (Current Month)</td>
+              <td style="padding:10px;border:1px solid #ddd;"></td>
+              <td style="padding:10px;border:1px solid #ddd;">₹${mR}</td>
+              <td style="padding:10px;border:1px solid #ddd;">Collection</td>
+            </tr>
+            ${expenses.map((e, i) => `<tr><td style="padding:10px;border:1px solid #ddd;">${i + 1}</td><td style="padding:10px;border:1px solid #ddd;">${e.date}</td><td style="padding:10px;border:1px solid #ddd;">${e.vendor}</td><td style="padding:10px;border:1px solid #ddd;">₹${e.amount}</td><td style="padding:10px;border:1px solid #ddd;"></td><td style="padding:10px;border:1px solid #ddd;">${e.remarks}</td></tr>`).join('')}
+            <tr style="font-weight:bold;background:#eee;">
+              <td style="padding:10px;border:1px solid #ddd;">C</td><td style="padding:10px;border:1px solid #ddd;">-</td><td style="padding:10px;border:1px solid #ddd;">Total Expenses</td><td style="padding:10px;border:1px solid #ddd;">₹${tE}</td><td style="padding:10px;border:1px solid #ddd;"></td><td style="padding:10px;border:1px solid #ddd;"></td>
+            </tr>
+            <tr style="font-weight:bold;background:#eee;">
+              <td style="padding:10px;border:1px solid #ddd;">D</td><td style="padding:10px;border:1px solid #ddd;">-</td><td style="padding:10px;border:1px solid #ddd;">Total Income (A+A1+B)</td><td style="padding:10px;border:1px solid #ddd;"></td><td style="padding:10px;border:1px solid #ddd;">₹${tI}</td><td style="padding:10px;border:1px solid #ddd;"></td>
+            </tr>
+            <tr style="background:#FFD700;font-weight:bold;font-size:12px;">
+              <td style="padding:10px;border:1px solid #ddd;">E</td><td style="padding:10px;border:1px solid #ddd;">-</td><td style="padding:10px;border:1px solid #ddd;">CLOSING BALANCE</td><td style="padding:10px;border:1px solid #ddd;"></td><td style="padding:10px;border:1px solid #ddd;">₹${closingBalance}</td><td style="padding:10px;border:1px solid #ddd;">Cash in hand</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-top:20px;border:1px solid #f87171;padding:10px;font-size:10px;background:#fff9f9;">
+          <p style="color:#d9534f;font-weight:bold;margin-top:0;">PENDING RECEIVABLES:</p>
+          <p>Water: ₹${totWP} (F: ${wP.map(p => p.flat).join(',') || 'Nil'}) | Maint: ₹${totMP} (F: ${mP.map(p => p.flat).join(',') || 'Nil'})</p>
+        </div>
+        <p style="text-align:center;font-style:italic;font-size:9px;margin-top:30px;">Updated statement as on ${new Date().toLocaleString('en-IN')}</p>
+      </body>
+    </html>
+  `;
+
+  const doOut = async () => {
     try {
-      const asset = Asset.fromModule(require('./icon.png'));
-      await asset.downloadAsync();
-      logoBase64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: 'base64' });
-    } catch (e) { console.log("Logo skip"); }
-
-    // Create HTML for attached bill images
-    const billImagesHtml = await Promise.all(expenses.map(async (e) => {
-      if (!e.imageUri) return '';
-      try {
-        const b64 = await FileSystem.readAsStringAsync(e.imageUri, { encoding: 'base64' });
-        return `
-          <div style="margin-top:20px; border-bottom:1px solid #ccc; padding-bottom:15px; page-break-inside: avoid;">
-            <p><b>Bill for:</b> ${e.vendor} (₹${e.amount})</p>
-            <img src="data:image/jpeg;base64,${b64}" style="width:100%; max-width:400px; border-radius:8px;" />
-          </div>`;
-      } catch (err) { return ''; }
-    }));
-
-    const html = `
-      <html>
-        <body style="font-family:Helvetica; padding:20px; color:#333;">
-          <div style="text-align:center; border-bottom:4px solid #FFD700; padding-bottom:10px;">
-            <h1 style="margin:0; color:#112240; font-size:20px;">SAI BRUNDAVAN APARTMENT ASSOCIATION</h1>
-            <p><b>ACCOUNTS STATEMENT - ${statementMonth.toUpperCase()}</b></p>
-          </div>
-          <table style="width:100%; border-collapse:collapse; margin-top:20px;">
-            <thead>
-              <tr style="background:#112240; color:white; font-size:11px;">
-                <th style="padding:10px; border:1px solid #ddd; text-align:left;">S.No</th>
-                <th style="padding:10px; border:1px solid #ddd; text-align:left;">Date</th>
-                <th style="padding:10px; border:1px solid #ddd; text-align:left;">Particulars</th>
-                <th style="padding:10px; border:1px solid #ddd; text-align:left;">Expenses</th>
-                <th style="padding:10px; border:1px solid #ddd; text-align:left;">Income</th>
-                <th style="padding:10px; border:1px solid #ddd; text-align:left;">Remarks</th>
-              </tr>
-            </thead>
-            <tbody style="font-size:11px;">
-              <tr style="background:#e6f2ff; font-weight:bold;">
-                <td style="padding:10px; border:1px solid #ddd;">A</td><td style="padding:10px; border:1px solid #ddd;">-</td><td style="padding:10px; border:1px solid #ddd;">Opening Balance (Prev Month)</td><td style="padding:10px; border:1px solid #ddd;"></td><td style="padding:10px; border:1px solid #ddd;">₹${openingBalance}</td><td style="padding:10px; border:1px solid #ddd;">B/F</td>
-              </tr>
-              <tr style="background:#f4f8ff;">
-                <td style="padding:10px; border:1px solid #ddd;">A1</td><td style="padding:10px; border:1px solid #ddd;">-</td><td style="padding:10px; border:1px solid #ddd;">Amt received through water tankers</td><td style="padding:10px; border:1px solid #ddd;"></td><td style="padding:10px; border:1px solid #ddd;">₹${waterReceived}</td><td style="padding:10px; border:1px solid #ddd;">Creditors</td>
-              </tr>
-              <tr style="background:#f4f8ff;">
-                <td style="padding:10px; border:1px solid #ddd;">B</td><td style="padding:10px; border:1px solid #ddd;">-</td><td style="padding:10px; border:1px solid #ddd;">Maintenance total (Current Month)</td><td style="padding:10px; border:1px solid #ddd;"></td><td style="padding:10px; border:1px solid #ddd;">₹${maintReceived}</td><td style="padding:10px; border:1px solid #ddd;">Collection</td>
-              </tr>
-              ${expenses.map((e, i) => `
-                <tr>
-                  <td style="padding:10px; border:1px solid #ddd;">${i+1}</td><td style="padding:10px; border:1px solid #ddd;">${e.date}</td><td style="padding:10px; border:1px solid #ddd;">${e.vendor}</td><td style="padding:10px; border:1px solid #ddd;">₹${e.amount}</td><td style="padding:10px; border:1px solid #ddd;"></td><td style="padding:10px; border:1px solid #ddd;">${e.remarks}</td>
-                </tr>
-              `).join('')}
-              <tr style="font-weight:bold; background:#eee;">
-                <td style="padding:10px; border:1px solid #ddd;">C</td><td style="padding:10px; border:1px solid #ddd;">-</td><td style="padding:10px; border:1px solid #ddd;">Total Expenses</td><td style="padding:10px; border:1px solid #ddd;">₹${totalExpenses}</td><td style="padding:10px; border:1px solid #ddd;"></td><td style="padding:10px; border:1px solid #ddd;"></td>
-              </tr>
-              <tr style="font-weight:bold; background:#eee;">
-                <td style="padding:10px; border:1px solid #ddd;">D</td><td style="padding:10px; border:1px solid #ddd;">-</td><td style="padding:10px; border:1px solid #ddd;">Total Income (A+A1+B)</td><td style="padding:10px; border:1px solid #ddd;"></td><td style="padding:10px; border:1px solid #ddd;">₹${totalIncome}</td><td style="padding:10px; border:1px solid #ddd;"></td>
-              </tr>
-              <tr style="background:#FFD700; font-weight:bold; font-size:13px;">
-                <td style="padding:10px; border:1px solid #ddd;">E</td><td style="padding:10px; border:1px solid #ddd;">-</td><td style="padding:10px; border:1px solid #ddd;">CLOSING BALANCE</td><td style="padding:10px; border:1px solid #ddd;"></td><td style="padding:10px; border:1px solid #ddd;">₹${closingBalance}</td><td style="padding:10px; border:1px solid #ddd;">Cash in hand</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div style="margin-top:20px; border:2px solid #f87171; padding:15px; border-radius:8px; background:#fff9f9;">
-            <p style="color:#d9534f; font-weight:bold; font-size:12px; margin:0 0 8px 0;">RECEIVABLES SUMMARY (PENDING DUES):</p>
-            <p style="font-size:11px;"><b>Water Pending: ₹${totalWaterPending}</b> (Flats: ${waterPendings.map(p=>p.flat).join(', ') || 'Nil'})</p>
-            <p style="font-size:11px; margin-top:5px;"><b>Maintenance Pending: ₹${totalMaintPending}</b> (Flats: ${maintPendings.map(p=>p.flat).join(', ') || 'Nil'})</p>
-          </div>
-
-          <div style="page-break-before: always;">
-            <h2 style="border-bottom: 2px solid #112240; padding-bottom: 5px;">Verified Bill Attachments</h2>
-            ${billImagesHtml.join('')}
-          </div>
-
-          <p style="text-align:center; font-style:italic; font-size:10px; margin-top:40px; color:#666;">
-            This is an updated statement as on ${new Date().toLocaleString('en-IN')}.
-          </p>
-          <div style="margin-top:40px; text-align:right;"><p>__________________________<br>Authorized Signature</p></div>
-        </body>
-      </html>`;
-      
-    const { uri } = await Print.printToFileAsync({ html });
-    await Sharing.shareAsync(uri);
+      const { uri } = await Print.printToFileAsync({ html: getHTML() });
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const handleScan = async (type) => {
-    let res = await (type === 'camera' 
-      ? ImagePicker.launchCameraAsync({ quality: 0.5, base64: true }) 
-      : ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true }));
+    let res = await (type === 'cam' 
+      ? ImagePicker.launchCameraAsync({ quality: 0.5, base64: true, allowsEditing: true }) 
+      : ImagePicker.launchImageLibraryAsync({ quality: 0.5, base64: true, allowsEditing: true }));
       
     if (res.canceled) return;
-    
-    setCurrentImage(res.assets[0].uri);
+    setImg(res.assets[0].uri);
     setIsProcessing(true);
     setVendor('');
     setAmount('');
@@ -160,58 +134,27 @@ export default function App() {
         body: fd
       });
       
-      const data = await apiRes.json();
-      const txt = data.ParsedResults?.[0]?.ParsedText || "";
+      const d = await apiRes.json();
+      const txt = d.ParsedResults?.[0]?.ParsedText || "";
+      const ns = txt.match(/\d+\.\d{2}/g);
+      const bA = ns ? String(Math.max(...ns.map(n => parseFloat(n.replace(/,/g, ''))).filter(n => n > 5))) : "";
       
-      // Smart Decimal Number Detection
-      const nums = txt.match(/\d+\.\d{2}/g);
-      const bestAmt = nums ? String(Math.max(...nums.map(n => parseFloat(n.replace(/,/g, ''))).filter(n => n < 1000000))) : "";
-      
-      setVendor(txt.split('\n')[0]?.substring(0, 25) || 'New Bill');
-      setAmount(bestAmt.split('.')[0]); // Whole numbers for ease
-      setRemarks('Auto-captured via OCR');
-    } catch(e) {
+      setVendor(txt.split('\n')[0]?.substring(0, 25) || '');
+      setAmount(bA.split('.')[0] || ''); 
+      setRemarks('Auto-captured');
+    } catch (e) {
       console.log(e);
-      setRemarks('Manual entry needed');
+      setRemarks('Manual entry');
     }
-    
     setIsProcessing(false);
     setModalVisible(true);
   };
 
-  const savePendingDues = () => {
-    const entry = { id: Date.now(), flat: pFlat, amt: pAmount, mon: pMonth };
-    if (pendingType === 'Water') {
-      setWaterPendings([...waterPendings, entry]);
-    } else {
-      setMaintPendings([...maintPendings, entry]);
-    }
-    setPFlat(''); setPAmount(''); setPMonth('');
-    setPendingModalVisible(false);
-  };
-
-  const saveVoucher = () => {
-    if (!vendor || !amount) {
-      return Alert.alert("Required", "Please enter Particulars and Amount.");
-    }
-    setExpenses([{
-      id: Date.now(),
-      vendor: vendor,
-      amount: parseInt(amount) || 0,
-      remarks: remarks,
-      date: billDate,
-      imageUri: currentImage
-    }, ...expenses]);
-    
-    setVendor(''); setAmount(''); setRemarks(''); setCurrentImage(null);
-    setModalVisible(false);
-  };
-
   if (!ready) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color="#FFD700" />
-        <Text style={styles.loadingText}>SBA Accounts Loading...</Text>
+        <Text style={styles.loaderText}>SBA Accounts Loading...</Text>
       </View>
     );
   }
@@ -225,10 +168,10 @@ export default function App() {
           <Text style={styles.subTitle}>APARTMENT ASSOCIATION</Text>
         </View>
         <View style={{ flexDirection: 'row' }}>
-          <TouchableOpacity onPress={exportAndShare} style={styles.iconBtn}>
+          <TouchableOpacity onPress={doOut} style={styles.iconBtn}>
             <FileText color="#FFD700" size={20} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={exportAndShare} style={[styles.iconBtn, { marginLeft: 10 }]}>
+          <TouchableOpacity onPress={doOut} style={[styles.iconBtn, { marginLeft: 10 }]}>
             <Share2 color="#FFD700" size={20} />
           </TouchableOpacity>
         </View>
@@ -237,25 +180,25 @@ export default function App() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.monthCard}>
           <Text style={styles.label}>Month:</Text>
-          <TextInput style={styles.monthInput} value={statementMonth} onChangeText={setStatementMonth} />
+          <TextInput style={styles.monthInput} value={month} onChangeText={setMonth} />
         </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Accounting Setup</Text>
           
           <Text style={styles.smallLabel}>Opening Bal (A)</Text>
-          <TextInput style={styles.input} keyboardType="numeric" value={openingBalance} onChangeText={setOpeningBalance} />
+          <TextInput style={styles.input} keyboardType="numeric" value={oB} onChangeText={setOB} />
           
           <Text style={styles.smallLabel}>Water tankers received (A1)</Text>
-          <TextInput style={styles.input} keyboardType="numeric" value={waterReceived} onChangeText={setWaterReceived} />
-          <TouchableOpacity style={styles.addBtn} onPress={() => { setPendingType('Water'); setPendingModalVisible(true); }}>
+          <TextInput style={styles.input} keyboardType="numeric" value={wR} onChangeText={setWR} />
+          <TouchableOpacity style={styles.addBtn} onPress={() => { setPType('Water'); setPendingModalVisible(true); }}>
             <UserPlus size={12} color="#FFD700" />
             <Text style={styles.addBtnText}>Add Pending Water Dues</Text>
           </TouchableOpacity>
 
           <Text style={styles.smallLabel}>Maintenance Total (B)</Text>
-          <TextInput style={styles.input} keyboardType="numeric" value={maintReceived} onChangeText={setMaintReceived} />
-          <TouchableOpacity style={styles.addBtn} onPress={() => { setPendingType('Maintenance'); setPendingModalVisible(true); }}>
+          <TextInput style={styles.input} keyboardType="numeric" value={mR} onChangeText={setMR} />
+          <TouchableOpacity style={styles.addBtn} onPress={() => { setPType('Maintenance'); setPendingModalVisible(true); }}>
             <UserPlus size={12} color="#FFD700" />
             <Text style={styles.addBtnText}>Add Pending Maintenance</Text>
           </TouchableOpacity>
@@ -284,37 +227,42 @@ export default function App() {
 
       <View style={styles.footer}>
         <View style={styles.actionCol}>
-          <TouchableOpacity style={[styles.fab, { backgroundColor: '#1d2d50' }]} onPress={() => { setCurrentImage(null); setModalVisible(true); }}>
+          <TouchableOpacity style={[styles.fab, { backgroundColor: '#1d2d50' }]} onPress={() => { setImg(null); setVendor(''); setAmount(''); setRemarks(''); setModalVisible(true); }}>
             <Plus color="#FFD700" size={28} />
           </TouchableOpacity>
           <Text style={styles.fabLabel}>Add manual</Text>
         </View>
         <View style={styles.actionCol}>
-          <TouchableOpacity style={[styles.fab, { backgroundColor: '#1d2d50' }]} onPress={() => handleScan('library')}>
-            <Image source={{uri: 'https://img.icons8.com/ios-filled/50/FFD700/image.png'}} style={{width: 24, height: 24}} />
+          <TouchableOpacity style={[styles.fab, { backgroundColor: '#1d2d50' }]} onPress={() => handleScan('lib')}>
+            <ImageIcon color="#0A192F" size={24} />
           </TouchableOpacity>
           <Text style={styles.fabLabel}>Gallery</Text>
         </View>
         <View style={styles.actionCol}>
-          <TouchableOpacity style={styles.fab} onPress={() => handleScan('camera')}>
+          <TouchableOpacity style={styles.fab} onPress={() => handleScan('cam')}>
             <Camera color="#0A192F" size={28} />
           </TouchableOpacity>
           <Text style={styles.fabLabel}>Scan Bill</Text>
         </View>
       </View>
 
-      {/* PENDING MODAL */}
+      {/* PENDING DUES MODAL */}
       <Modal visible={pendingModalVisible} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 18 }}>{pendingType} Pending</Text>
+              <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 18 }}>{pType} Pending</Text>
               <TouchableOpacity onPress={() => setPendingModalVisible(false)}><X color="#fff" /></TouchableOpacity>
             </View>
-            <TextInput placeholder="Flat No" placeholderTextColor="#8892b0" style={styles.modalInput} value={pFlat} onChangeText={setPFlat} />
-            <TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.modalInput} value={pAmount} onChangeText={setPAmount} />
-            <TextInput placeholder="Month" placeholderTextColor="#8892b0" style={styles.modalInput} value={pMonth} onChangeText={setPMonth} />
-            <TouchableOpacity style={styles.saveBtn} onPress={savePendingDues}>
+            <TextInput placeholder="Flat No (e.g. 504)" placeholderTextColor="#8892b0" style={styles.modalInput} value={pFlat} onChangeText={setPFlat} />
+            <TextInput placeholder="Amount Pending (₹)" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.modalInput} value={pAmt} onChangeText={setPAmt} />
+            <TextInput placeholder="Month(s) (e.g. June-July)" placeholderTextColor="#8892b0" style={styles.modalInput} value={pMon} onChangeText={setPMon} />
+            <TouchableOpacity style={styles.saveBtn} onPress={() => {
+              const n = { id: Date.now(), flat: pFlat, amt: pAmt, mon: pMon };
+              pType === 'Water' ? setWP([...wP, n]) : setMP([...mP, n]);
+              setPFlat(''); setPAmt(''); setPMon('');
+              setPendingModalVisible(false);
+            }}>
               <Text style={styles.saveBtnText}>Save</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setPendingModalVisible(false)} style={styles.goBackBtn}>
@@ -337,18 +285,21 @@ export default function App() {
               <TouchableOpacity onPress={() => setModalVisible(false)}><X color="#fff" /></TouchableOpacity>
             </View>
             
-            {currentImage && (
+            {img && (
               <ScrollView style={{ maxHeight: 200, marginBottom: 15 }}>
-                <Image source={{ uri: currentImage }} style={{ width: '100%', height: 350, borderRadius: 8 }} resizeMode="contain" />
+                <Image source={{ uri: img }} style={{ width: '100%', height: 350, borderRadius: 8 }} resizeMode="contain" />
               </ScrollView>
             )}
 
-            <TextInput placeholder="Date (DD/MM/YYYY)" placeholderTextColor="#8892b0" style={styles.modalInput} value={billDate} onChangeText={setBillDate} />
             <TextInput placeholder="Particulars" placeholderTextColor="#8892b0" style={styles.modalInput} value={vendor} onChangeText={setVendor} />
             <TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.modalInput} value={amount} onChangeText={setAmount} />
             <TextInput placeholder="Remarks" placeholderTextColor="#8892b0" style={styles.modalInput} value={remarks} onChangeText={setRemarks} />
             
-            <TouchableOpacity style={styles.saveBtn} onPress={saveVoucher}>
+            <TouchableOpacity style={styles.saveBtn} onPress={() => {
+              if (!vendor || !amount) { Alert.alert("Error", "Enter Particulars and Amount"); return; }
+              setExpenses([{ id: Date.now(), vendor: vendor, amount: parseInt(amount) || 0, remarks: remarks, date: new Date().toLocaleDateString('en-IN') }, ...expenses]);
+              setModalVisible(false);
+            }}>
               <Text style={styles.saveBtnText}>Verify & Save</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.goBackBtn}>
@@ -370,8 +321,8 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A192F' },
-  loadingContainer: { flex: 1, backgroundColor: '#0A192F', justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: '#fff', marginTop: 10, fontWeight: 'bold' },
+  loaderContainer: { flex: 1, backgroundColor: '#0A192F', justifyContent: 'center', alignItems: 'center' },
+  loaderText: { color: '#fff', marginTop: 10, fontWeight: 'bold' },
   header: { padding: 20, paddingTop: Platform.OS === 'ios' ? 10 : 50, backgroundColor: '#112240', flexDirection: 'row', alignItems: 'center' },
   logo: { width: 42, height: 42, borderRadius: 21, marginRight: 12, borderWidth: 1, borderColor: '#FFD700' },
   title: { color: '#FFD700', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },
@@ -390,9 +341,6 @@ const styles = StyleSheet.create({
   totalAmount: { color: '#fff', fontSize: 38, fontWeight: 'bold', marginTop: 5 },
   sectionTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold', margin: 20 },
   item: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#112240', marginHorizontal: 20, marginBottom: 12, borderRadius: 12 },
-  itemTitle: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
-  itemDate: { color: '#8892b0', fontSize: 11, marginTop: 2 },
-  itemPrice: { color: '#FFD700', fontWeight: 'bold', fontSize: 18 },
   footer: { position: 'absolute', bottom: 20, width: '100%', flexDirection: 'row', justifyContent: 'center' },
   actionCol: { alignItems: 'center', marginHorizontal: 15 },
   fab: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFD700', justifyContent: 'center', alignItems: 'center', elevation: 5 },
