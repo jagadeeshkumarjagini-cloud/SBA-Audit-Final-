@@ -7,9 +7,11 @@
     "expo-image-picker": "~14.7.1",
     "expo-print": "~12.8.1",
     "expo-sharing": "~11.10.0",
+    "expo-file-system": "~16.0.8",
     "lucide-react-native": "0.344.0",
     "react": "18.2.0",
     "react-native": "0.73.6",
     "react-native-svg": "14.1.0"
-  }
+  },
+  "private": true
 }
