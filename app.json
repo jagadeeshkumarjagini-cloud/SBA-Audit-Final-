@@ -7,9 +7,13 @@
     "icon": "./icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A192F",
+    "splash": {
+      "image": "./icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A192F"
+    },
     "android": {
       "package": "com.sba.audit.app",
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./icon.png",
@@ -18,7 +22,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "a0de5d01-9c64-47a5-8188-5243152d780a"
+        "projectId": "955b8c7f-b71d-41ce-be15-670d57c423d7"
       }
     }
   }
