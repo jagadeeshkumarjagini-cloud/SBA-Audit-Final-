@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, SafeAreaView, Image, Modal, TextInput, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { Camera, FileText, Trash2, Plus, Sparkles, UserPlus, X, Share2 } from 'lucide-react-native';
 
 const API_KEY = 'K81963065788957';
@@ -12,6 +13,7 @@ export default function App() {
   const [mV, setMV] = useState(false);
   const [pMV, setPMV] = useState(false);
   const [isP, setIsP] = useState(false);
+  const [ready, setReady] = useState(false);
   const [mon, setMon] = useState(new Date().toLocaleString('default',{month:'long',year:'numeric'}));
   
   const [oB, setOB] = useState('16725');
@@ -21,96 +23,140 @@ export default function App() {
   const [mP, setMP] = useState([]);
   
   const [pT, setPT] = useState('Water'); 
-  const [f, setF] = useState(''); const [a, setA] = useState(''); const [m, setM] = useState('');
   const [vend, setVend] = useState(''); const [amt, setAmt] = useState(''); const [rem, setRem] = useState('');
   const [img, setImg] = useState(null);
 
+  useEffect(() => { setTimeout(() => setReady(true), 2000); }, []);
+
   const tE = ex.reduce((s, e) => s + e.amount, 0);
   const tI = (parseFloat(oB)||0) + (parseFloat(wR)||0) + (parseFloat(mR)||0);
-  const twp = wP.reduce((s, p) => s + (parseFloat(p.amt)||0), 0);
-  const tmp = mP.reduce((s, p) => s + (parseFloat(p.amt)||0), 0);
+  const closingBal = tI - tE;
 
-  const getHTML = () => `<html><body style="font-family:Helvetica;padding:20px;color:#333;"><div style="text-align:center;border-bottom:4px solid #FFD700;padding-bottom:10px;"><h1>SAI BRUNDAVAN APARTMENT ASSOCIATION</h1><p><b>ACCOUNTS STATEMENT - ${mon.toUpperCase()}</b></p></div><table style="width:100%;border-collapse:collapse;margin-top:20px;"><thead><tr style="background:#112240;color:white;font-size:10px;"><th>S.No</th><th>Date</th><th>Particulars</th><th>Expenses</th><th>Income</th><th>Remarks</th></tr></thead><tbody style="font-size:10px;"><tr style="background:#e6f2ff;font-weight:bold;"><td>A</td><td>-</td><td>Opening Balance (Prev Month)</td><td></td><td>₹${oB}</td><td>B/F</td></tr><tr style="background:#f4f8ff;"><td>A1</td><td>-</td><td>Amt received through water tankers</td><td></td><td>₹${wR}</td><td>Creditors</td></tr><tr style="background:#f4f8ff;"><td>B</td><td>-</td><td>Maintenance Amt received </td><td></td><td>₹${mR}</td><td>Collection</td></tr>${ex.map((e,i)=>`<tr><td>${i+1}</td><td>${e.date}</td><td>${e.vendor}</td><td>₹${e.amount}</td><td></td><td>${e.remarks}</td></tr>`).join('')}<tr style="font-weight:bold;background:#eee;"><td>C</td><td>-</td><td>Total Expenses</td><td>₹${tE}</td><td></td><td></td></tr><tr style="font-weight:bold;background:#eee;"><td>D</td><td>-</td><td>Total Amt in receipt (A+A1+B)</td><td></td><td>₹${tI}</td><td></td></tr><tr style="background:#FFD700;font-weight:bold;font-size:12px;"><td>E</td><td>-</td><td>CLOSING BALANCE</td><td></td><td>₹${tI-tE}</td><td>Cash in hand</td></tr></tbody></table><div style="margin-top:20px;border:1px solid #f87171;padding:10px;font-size:10px;background:#fff9f9;"><p style="color:#d9534f;font-weight:bold;">PENDING RECEIVABLES:</p><p>Water: ₹${twp} | Maint: ₹${tmp}</p></div><p style="text-align:center;font-style:italic;font-size:9px;margin-top:30px;">Updated statement as on ${new Date().toLocaleString('en-IN')}</p></body></html>`;
+  const exportAndShare = async () => {
+    Alert.alert("Generating PDF", "Attaching bill copies... please wait.");
+    
+    // 📸 Convert all bill images to Base64 for PDF
+    const billImagesHtml = await Promise.all(ex.map(async (item, index) => {
+      if (!item.imageUri) return '';
+      const base64 = await FileSystem.readAsStringAsync(item.imageUri, { encoding: 'base64' });
+      return `
+        <div style="page-break-before: always; text-align: center; padding: 20px; border: 1px solid #ddd;">
+          <h3>Voucher Reference #${index + 1}</h3>
+          <p><b>Particulars:</b> ${item.vendor} | <b>Amount:</b> ₹${item.amount}</p>
+          <img src="data:image/jpeg;base64,${base64}" style="width: 100%; max-height: 700px; object-fit: contain;" />
+        </div>`;
+    }));
 
-  const doOut = async () => { const { uri } = await Print.printToFileAsync({ html: getHTML() }); await Sharing.shareAsync(uri); };
-
-  const scan = async () => {
-    // 📸 ENABLED CROPPING/EDITING
-    let res = await ImagePicker.launchCameraAsync({ quality:0.8, base64:true, allowsEditing: true });
-    if (res.canceled) return;
-    setImg(res.assets[0].uri); setIsP(true);
-    try {
-      const fd = new FormData(); fd.append('base64Image', `data:image/jpeg;base64,${res.assets[0].base64}`); fd.append('OCREngine', '2');
-      const apiRes = await fetch('https://api.ocr.space/parse/image',{method:'POST',headers:{'apikey':API_KEY},body:fd});
-      const d = await apiRes.json(); const txt = d.ParsedResults?.[0]?.ParsedText || "";
+    const html = `
+      <html>
+        <head>
+          <style>
+            body { font-family: 'Helvetica'; padding: 20px; color: #333; }
+            .header { text-align: center; border-bottom: 5px solid #FFD700; padding-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background-color: #112240; color: white; padding: 10px; border: 1px solid #ddd; text-align: left; font-size: 10px; }
+            td { padding: 10px; border: 1px solid #ddd; font-size: 10px; }
+            .opening-row { background-color: #e6f2ff; font-weight: bold; }
+            .income-row { background-color: #f4f8ff; font-weight: bold; }
+            .closing-row { background-color: #FFD700; color: #000; font-weight: bold; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>SAI BRUNDAVAN APARTMENT ASSOCIATION</h1>
+            <p><b>ACCOUNTS STATEMENT - ${mon.toUpperCase()}</b></p>
+          </div>
+          <table>
+            <thead><tr><th>S.No</th><th>Date</th><th>Particulars</th><th>Expenses</th><th>Income</th><th>Remarks</th></tr></thead>
+            <tbody>
+              <tr class="opening-row"><td>A</td><td>-</td><td>Opening Balance (Prev Month)</td><td></td><td>₹${oB}</td><td>B/F</td></tr>
+              <tr class="income-row"><td>B</td><td>-</td><td>Excess water usage Amt</td><td></td><td>₹${wR}</td><td>Creditors</td></tr>
+              <tr class="income-row"><td>C</td><td>-</td><td>Maintenance Amt received</td><td></td><td>₹${mR}</td><td>Collection</td></tr>
+              ${ex.map((e, i) => `<tr><td>${i+1}</td><td>${e.date}</td><td>${e.vendor}</td><td>₹${e.amount}</td><td></td><td>${e.remarks}</td></tr>`).join('')}
+              <tr style="font-weight:bold; background:#eee;"><td>D</td><td>-</td><td>TOTAL RECEIPTS (A+B+C)</td><td></td><td>₹${tI}</td><td></td></tr>
+              <tr style="font-weight:bold; background:#eee;"><td>E</td><td>-</td><td>TOTAL EXPENDITURE</td><td>₹${tE}</td><td></td><td></td></tr>
+              <tr class="closing-row"><td>F</td><td>-</td><td>CLOSING BALANCE</td><td></td><td>₹${closingBal}</td><td>Cash in hand</td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:20px; border: 1px solid #f87171; padding:10px; font-size:10px; background:#fff9f9;">
+            <p style="color:#d9534f; font-weight:bold;">PENDING RECEIVABLES:</p>
+            <p>Water: ₹${wP.reduce((s,p)=>s+(parseFloat(p.amt)||0),0)} | Maint: ₹${mP.reduce((s,p)=>s+(parseFloat(p.amt)||0),0)}</p>
+          </div>
+          <p style="text-align:center; font-style:italic; font-size:9px; margin-top:20px;">Updated statement as on ${new Date().toLocaleString('en-IN')}</p>
+          ${billImagesHtml.join('')}
+        </body>
+      </html>`;
       
-      // 🧠 SMART AMOUNT DETECTION
-      const lines = txt.split('\n');
-      const currencyMatch = txt.match(/\d+\.\d{2}/g); // Look for numbers like 408250.00
-      const amount = currencyMatch ? currencyMatch[currencyMatch.length - 1] : "";
-      
-      setVend(lines[0]?.substring(0,25) || 'Bill Entry'); 
-      setAmt(amount); 
-      setRem('Verified via OCR');
-    } catch(e) { Alert.alert("Manual Entry"); }
-    setIsP(false); setMV(true);
+    const { uri } = await Print.printToFileAsync({ html });
+    await Sharing.shareAsync(uri);
   };
 
+  const scan = async () => {
+    let res = await ImagePicker.launchCameraAsync({ quality:0.5, base64:true, allowsEditing: true });
+    if (res.canceled) return;
+    setImg(res.assets[0].uri); setProc(true); setVend(''); setAmt('');
+    try {
+      const fd = new FormData();
+      fd.append('base64Image', `data:image/jpeg;base64,${res.assets[0].base64}`);
+      const api = await fetch('https://api.ocr.space/parse/image',{method:'POST',headers:{'apikey':API_KEY},body:fd});
+      const d = await api.json();
+      const txt = d.ParsedResults?.[0]?.ParsedText || "";
+      const ns = txt.match(/\d+\.\d{2}/g);
+      const val = ns ? String(Math.max(...ns.map(n=>parseFloat(n)))) : "";
+      setVend(txt.split('\n')[0]?.substring(0,25) || 'Bill'); setAmt(val);
+    } catch(e) { console.log(e); }
+    setProc(false); setMV(true);
+  };
+
+  if(!ready) return <View style={s.lC}><ActivityIndicator size="large" color="#FFD700"/><Text style={s.lT}>SBA Accounts Starting...</Text></View>;
+
   return (
-    <SafeAreaView style={styles.co}>
-      <View style={styles.he}>
-        <Image source={require('./icon.png')} style={styles.lo} />
-        <View style={{flex:1}}><Text style={styles.ti}>SAI BRUNDAVAN</Text><Text style={styles.su}>APARTMENT ASSOCIATION</Text></View>
-        <View style={{flexDirection:'row'}}>
-          <TouchableOpacity onPress={doOut} style={styles.bt}><FileText color="#FFD700" size={20}/></TouchableOpacity>
-          <TouchableOpacity onPress={doOut} style={[styles.bt,{marginLeft:8}]}><Share2 color="#FFD700" size={20}/></TouchableOpacity>
-        </View>
+    <SafeAreaView style={s.co}>
+      <View style={s.he}>
+        <Image source={require('./icon.png')} style={s.lo} />
+        <View style={{flex:1}}><Text style={s.ti}>SAI BRUNDAVAN</Text><Text style={s.su}>APARTMENT ASSOCIATION</Text></View>
+        <TouchableOpacity onPress={exportAndShare} style={s.bt}><Share2 color="#FFD700" size={20}/></TouchableOpacity>
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.ro}><Text style={styles.lb}>Month:</Text><TextInput style={styles.mI} value={mon} onChangeText={setMon}/></View>
-        <View style={styles.ca}>
-          <Text style={styles.ct}>Setup</Text>
-          <Text style={styles.sl}>Opening Balance (A)</Text><TextInput style={styles.in} keyboardType="numeric" value={oB} onChangeText={setOB}/>
-          <Text style={styles.sl}>Excess water usage Amt (B)</Text><TextInput style={styles.in} keyboardType="numeric" value={wR} onChangeText={setWR}/>
-          <TouchableOpacity style={styles.ad} onPress={()=>{setPT('Water');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={styles.at}>Add Pending Water</Text></TouchableOpacity>
-          <Text style={styles.sl}>Maintenance Amt received (C)</Text><TextInput style={styles.in} keyboardType="numeric" value={mR} onChangeText={setMR}/>
-          <TouchableOpacity style={styles.ad} onPress={()=>{setPT('Maintenance');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={styles.at}>Add Pending Maintenance</Text></TouchableOpacity>
+        <View style={s.ro}><Text style={s.lb}>Month:</Text><TextInput style={s.mI} value={mon} onChangeText={setMon}/></View>
+        <View style={s.ca}>
+          <Text style={s.ct}>Setup</Text>
+          <Text style={s.sl}>Opening Bal (A)</Text><TextInput style={s.in} keyboardType="numeric" value={oB} onChangeText={setOB}/>
+          <Text style={s.sl}>Water tankers Amt (B)</Text><TextInput style={s.in} keyboardType="numeric" value={wR} onChangeText={setWR}/>
+          <Text style={s.sl}>Maintenance Amt (C)</Text><TextInput style={s.in} keyboardType="numeric" value={mR} onChangeText={setMR}/>
         </View>
-        <View style={styles.sm}><Text style={{color:'#8892b0'}}>Closing Balance (D)</Text><Text style={styles.am}>₹{(tI - tE).toLocaleString()}</Text></View>
-        <Text style={styles.st}>Expenditure Ledger</Text>
-        {ex.map((e,i)=>(<View key={e.id} style={styles.it}><View style={{flex:1}}><Text style={{color:'#fff'}}>{i+1}. {e.vendor}</Text><Text style={{color:'#8892b0',fontSize:10}}>{e.date}</Text></View><Text style={{color:'#FFD700',fontWeight:'bold'}}>₹{e.amount}</Text><TouchableOpacity onPress={()=>setEx(ex.filter(x=>x.id!==e.id))}><Trash2 size={16} color="#f87171" style={{marginLeft:10}}/></TouchableOpacity></View>))}
-        <View style={{height:150}}/></ScrollView>
-      
-      <View style={styles.fo}>
-        <View style={styles.ac}><TouchableOpacity style={[styles.fb,{backgroundColor:'#1d2d50'}]} onPress={()=>{setImg(null);setMV(true)}}><Plus color="#FFD700"/></TouchableOpacity><Text style={styles.fl}>Add bills manually if any</Text></View>
-        <View style={styles.ac}><TouchableOpacity style={styles.fb} onPress={scan}><Camera color="#0A192F"/></TouchableOpacity><Text style={styles.fl}>Click camera to capture bills</Text></View>
+        <View style={s.sm}><Text style={s.am}>₹{closingBal.toLocaleString()}</Text></View>
+        <Text style={s.st}>Expenditure Ledger</Text>
+        {ex.map((e,i)=>(
+          <View key={e.id} style={s.it}>
+            <View style={{flex:1}}><Text style={{color:'#fff'}}>{i+1}. {e.vendor}</Text><Text style={{color:'#8892b0',fontSize:10}}>{e.date}</Text></View>
+            <Text style={{color:'#FFD700',fontWeight:'bold'}}>₹{e.amount}</Text>
+            <TouchableOpacity onPress={()=>setEx(ex.filter(x=>x.id!==e.id))}><Trash2 size={16} color="#f87171" style={{marginLeft:10}}/></TouchableOpacity>
+          </View>
+        ))}
+        <View style={{height:150}}/>
+      </ScrollView>
+      <View style={s.fo}>
+        <TouchableOpacity style={s.fb} onPress={()=>{setImg(null);setMV(true)}}><Plus color="#0A192F"/></TouchableOpacity>
+        <TouchableOpacity style={s.fb} onPress={scan}><Camera color="#0A192F"/></TouchableOpacity>
       </View>
-
-      {/* PENDING MODAL */}
-      <Modal visible={pMV} transparent={true} animationType="fade"><View style={styles.ov}><View style={styles.mc}><Text style={{color:'#FFD700',fontWeight:'bold',marginBottom:10}}>{pT} Pending</Text><TextInput placeholder="Flat No" placeholderTextColor="#8892b0" style={styles.mi} value={f} onChangeText={setF}/><TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.mi} value={a} onChangeText={setA}/><TextInput placeholder="Month" placeholderTextColor="#8892b0" style={styles.mi} value={m} onChangeText={setM}/><TouchableOpacity style={styles.sb} onPress={()=>{const n={id:Date.now(),flat:f,amt:a,mon:m};pT==='Water'?setWP([...wP,n]):setMP([...mP,n]);setF('');setA('');setPMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Save</Text></TouchableOpacity><TouchableOpacity onPress={()=>setPMV(false)} style={styles.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity></View></View></Modal>
-      
-      {/* VOUCHER MODAL WITH FULL SCALE IMAGE */}
-      <Modal visible={mV} transparent={true} animationType="slide"><View style={styles.ov}><View style={styles.mc}>
-        <View style={styles.ai}><Sparkles color="#FFD700" size={14}/><Text style={{color:'#FFD700',fontSize:10,marginLeft:5,flex:1}}>Please check the auto-captured details correctly entered.</Text></View>
-        <View style={styles.mh}><Text style={{color:'#fff',fontWeight:'bold'}}>Voucher Entry</Text><TouchableOpacity onPress={()=>setMV(false)}><X color="#fff"/></TouchableOpacity></View>
-        
-        {img && <View style={styles.imgWrap}><Image source={{uri:img}} style={styles.fullImg} resizeMode="contain"/></View>}
-        
-        <TextInput placeholder="Particulars" placeholderTextColor="#8892b0" style={styles.mi} value={vend} onChangeText={setVend}/>
-        <TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.mi} value={amt} onChangeText={setAmt}/>
-        <TextInput placeholder="Remarks" placeholderTextColor="#8892b0" style={styles.mi} value={rem} onChangeText={setRem}/>
-        
-        <TouchableOpacity style={styles.sb} onPress={()=>{setEx([{id:Date.now(),vendor:vend,amount:parseInt(amt)||0,remarks:rem,date:new Date().toLocaleDateString('en-IN')},...ex]);setMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Verify & Save</Text></TouchableOpacity>
-        <TouchableOpacity onPress={()=>setMV(false)} style={styles.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity>
+      <Modal visible={mV} transparent={true} animationType="slide"><View style={s.ov}><View style={s.mc}>
+        <View style={s.ai}><Sparkles color="#FFD700" size={14}/><Text style={{color:'#FFD700',fontSize:10,marginLeft:5,flex:1}}>Verify bill details.</Text></View>
+        {img && <ScrollView style={{maxHeight:250}}><Image source={{uri:img}} style={{width:'100%',height:350,borderRadius:10}} resizeMode="contain"/></ScrollView>}
+        <TextInput placeholder="Particulars" placeholderTextColor="#8892b0" style={s.mi} value={vend} onChangeText={setVend}/>
+        <TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={s.mi} value={amt} onChangeText={setAmt}/>
+        <TouchableOpacity style={s.sb} onPress={()=>{setEx([{id:Date.now(),vendor:vend,amount:parseInt(amt)||0,remarks:rem,date:new Date().toLocaleDateString('en-IN'), imageUri: img},...ex]);setMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Verify & Save</Text></TouchableOpacity>
+        <TouchableOpacity onPress={()=>setMV(false)} style={s.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity>
       </View></View></Modal>
-      
-      {isP && <View style={styles.ol}><ActivityIndicator size="large" color="#FFD700"/><Text style={{color:'#fff',marginTop:10}}>AI Scanning...</Text></View>}
+      {isP && <View style={s.ol}><ActivityIndicator size="large" color="#FFD700"/><Text style={{color:'#fff',marginTop:10}}>AI Scanning...</Text></View>}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   co: { flex: 1, backgroundColor: '#0A192F' },
+  lC: { flex: 1, backgroundColor: '#0A192F', justifyContent: 'center', alignItems: 'center' },
+  lT: { color: '#fff', marginTop: 10 },
   he: { padding: 20, paddingTop: 50, backgroundColor: '#112240', flexDirection: 'row', alignItems: 'center' },
   lo: { width: 40, height: 40, borderRadius: 20, marginRight: 10, borderWidth: 1, borderColor: '#FFD700' },
   ti: { color: '#FFD700', fontSize: 13, fontWeight: 'bold' },
@@ -123,23 +169,16 @@ const styles = StyleSheet.create({
   ct: { color: '#FFD700', fontWeight: 'bold', fontSize: 12 },
   sl: { color: '#8892b0', fontSize: 10, marginTop: 10 },
   in: { borderBottomWidth: 1, borderColor: '#333', color: '#fff', padding: 5, fontSize: 15 },
-  ad: { flexDirection: 'row', marginTop: 8 },
-  at: { color: '#FFD700', fontSize: 9, marginLeft: 5, fontWeight:'bold' },
-  sm: { marginHorizontal: 20, padding: 20, borderRadius: 20, backgroundColor: '#1d2d50', borderLeftWidth: 5, borderLeftColor: '#FFD700' },
+  sm: { marginHorizontal: 20, padding: 20, borderRadius: 20, backgroundColor: '#1d2d50', borderLeftWidth: 5, borderLeftColor: '#FFD700', alignItems:'center' },
   am: { color: '#fff', fontSize: 32, fontWeight: 'bold' },
   st: { color: '#fff', fontSize: 15, fontWeight: 'bold', margin: 20 },
   it: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#112240', marginHorizontal: 20, marginBottom: 10, borderRadius: 12 },
-  fo: { position: 'absolute', bottom: 20, width: '100%', flexDirection: 'row' },
-  ac: { flex: 1, alignItems: 'center' },
-  fb: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#FFD700', justifyContent: 'center', alignItems: 'center' },
-  fl: { color: '#FFD700', fontSize: 8, marginTop: 5, textAlign:'center' },
+  fo: { position: 'absolute', bottom: 20, width: '100%', flexDirection: 'row', justifyContent:'center' },
+  fb: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#FFD700', justifyContent: 'center', alignItems: 'center', marginHorizontal: 20 },
   ov: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 15 },
-  mc: { backgroundColor: '#112240', borderRadius: 20, padding: 15 },
-  mh: { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginVertical:10 },
+  mc: { backgroundColor: '#112240', borderRadius: 20, padding: 20 },
   mi: { backgroundColor: '#1d2d50', color: '#fff', padding: 12, borderRadius: 10, marginTop: 10 },
-  imgWrap: { width: '100%', height: 200, backgroundColor: '#000', borderRadius: 10, overflow: 'hidden' },
-  fullImg: { width: '100%', height: '100%' },
-  sb: { backgroundColor: '#FFD700', padding: 15, borderRadius: 12, marginTop: 15, alignItems: 'center' },
+  sb: { backgroundColor: '#FFD700', padding: 15, borderRadius: 12, marginTop: 20, alignItems: 'center' },
   gb: { marginTop: 15, alignItems: 'center' },
   ai: { backgroundColor: '#1d2d50', padding: 10, borderRadius: 8, flexDirection: 'row', alignItems: 'center' },
   ol: { position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(10,25,47,0.95)', justifyContent:'center', alignItems:'center', zIndex:99 }
