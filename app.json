@@ -7,11 +7,6 @@
     "icon": "./icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A192F",
-    "splash": {
-      "image": "./icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A192F"
-    },
     "android": {
       "package": "com.sba.audit.app",
       "versionCode": 1,
@@ -22,7 +17,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "955b8c7f-b71d-41ce-be15-670d57c423d7"
+        "projectId": "PASTE_YOUR_NEW_PROJECT_ID_HERE"
       }
     }
   }
