@@ -1,81 +1,100 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, SafeAreaView, Image, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, SafeAreaView, Image, Modal, TextInput, ActivityIndicator, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+import { Asset } from 'expo-asset';
 import { Camera, FileText, Trash2, Plus, Sparkles, UserPlus, X, Share2, Image as ImgIco } from 'lucide-react-native';
 
 const API_KEY = 'K81963065788957';
+const todayStr = () => new Date().toLocaleDateString('en-IN');
 
 export default function App() {
   const [ex, setEx] = useState([]);
-  const [mV, setMV] = useState(false);
+  const[mV, setMV] = useState(false);
   const [pMV, setPMV] = useState(false);
   const [isP, setIsP] = useState(false);
-  const[ready, setReady] = useState(false);
-  const [mon, setMon] = useState(new Date().toLocaleString('default',{month:'long',year:'numeric'}));
-  
+  const [ready, setReady] = useState(false);
+  const [ocrMsg, setOcrMsg] = useState('');
+
+  const[mon, setMon] = useState(new Date().toLocaleString('default', { month: 'long', year: 'numeric' }));
   const [oB, setOB] = useState('16725');
   const [wR, setWR] = useState('6597');
-  const [mR, setMR] = useState('22800');
-  const[wP, setWP] = useState([]);
-  const [mP, setMP] = useState([]);
-  const [pT, setPT] = useState('Water'); 
+  const[mR, setMR] = useState('22800');
 
-  const [f, setF] = useState(''); const [a, setA] = useState(''); const [m, setM] = useState('');
-  const [v, setV] = useState(''); const [amt, setAmt] = useState(''); const [rem, setRem] = useState('');
+  const [wP, setWP] = useState([]);
+  const [mP, setMP] = useState([]);
+  const [pT, setPT] = useState('Water');
+
+  const [f, setF] = useState(''); const [a, setA] = useState(''); const[m, setM] = useState('');
+  
+  const [v, setV] = useState(''); 
+  const[amt, setAmt] = useState(''); 
+  const [rem, setRem] = useState('');
+  const[bDate, setBDate] = useState(todayStr());
   const [img, setImg] = useState(null);
 
-  useEffect(() => { setTimeout(() => setReady(true), 1000); },[]);
+  useEffect(() => { setTimeout(() => setReady(true), 1500); },[]);
 
   const tE = ex.reduce((s, e) => s + e.amount, 0);
   const tI = (parseFloat(oB)||0) + (parseFloat(wR)||0) + (parseFloat(mR)||0);
-  const closingBalance = tI - tE;
-  const totWP = wP.reduce((s, p) => s + (parseFloat(p.amt)||0), 0);
-  const totMP = mP.reduce((s, p) => s + (parseFloat(p.amt)||0), 0);
+  const clB = tI - tE;
+  const twp = wP.reduce((s, p) => s + (parseFloat(p.amt)||0), 0);
+  const tmp = mP.reduce((s, p) => s + (parseFloat(p.amt)||0), 0);
 
-  const getH = () => `<html><body style="font-family:Helvetica;padding:20px;color:#333;"><div style="text-align:center;border-bottom:4px solid #FFD700;padding-bottom:10px;"><h1>SAI BRUNDAVAN APARTMENT ASSOCIATION</h1><p><b>ACCOUNTS STATEMENT - ${mon.toUpperCase()}</b></p></div><table style="width:100%;border-collapse:collapse;margin-top:20px;"><thead><tr style="background:#112240;color:white;font-size:10px;"><th>S.No</th><th>Date</th><th>Particulars</th><th>Expenses</th><th>Income</th><th>Remarks</th></tr></thead><tbody style="font-size:10px;"><tr style="background:#e6f2ff;font-weight:bold;"><td>A</td><td>-</td><td>Opening Balance (Prev Month)</td><td></td><td>₹${oB}</td><td>B/F</td></tr><tr style="background:#f4f8ff;"><td>A1</td><td>-</td><td>Amt received through water tankers</td><td></td><td>₹${wR}</td><td>Creditors</td></tr><tr style="background:#f4f8ff;"><td>B</td><td>-</td><td>Maintenance total (Current Month)</td><td></td><td>₹${mR}</td><td>Collection</td></tr>${ex.map((e,i)=>`<tr><td>${i+1}</td><td>${e.date}</td><td>${e.vendor}</td><td>₹${e.amount}</td><td></td><td>${e.remarks}</td></tr>`).join('')}<tr style="font-weight:bold;background:#eee;"><td>C</td><td>-</td><td>Total Expenses</td><td>₹${tE}</td><td></td><td></td></tr><tr style="font-weight:bold;background:#eee;"><td>D</td><td>-</td><td>Total Income (A+A1+B)</td><td></td><td>₹${tI}</td><td></td></tr><tr style="background:#FFD700;font-weight:bold;font-size:12px;"><td>E</td><td>-</td><td>CLOSING BALANCE</td><td></td><td>₹${closingBalance}</td><td>Cash in hand</td></tr></tbody></table><div style="margin-top:20px;border:1px solid #f87171;padding:10px;font-size:10px;background:#fff9f9;"><p style="color:#d9534f;font-weight:bold;">PENDING RECEIVABLES:</p><p>Water: ₹${totWP} (F: ${wP.map(p=>p.flat).join(',')}) | Maint: ₹${totMP} (F: ${mP.map(p=>p.flat).join(',')})</p></div><p style="text-align:center;font-style:italic;font-size:9px;margin-top:30px;">Updated statement as on ${new Date().toLocaleString('en-IN')}</p></body></html>`;
+  const getHTML = () => `<html><body style="font-family:Helvetica;padding:20px;color:#333;"><div style="text-align:center;border-bottom:4px solid #FFD700;padding-bottom:10px;"><h1>SAI BRUNDAVAN APARTMENT ASSOCIATION</h1><p><b>ACCOUNTS STATEMENT - ${mon.toUpperCase()}</b></p></div><table style="width:100%;border-collapse:collapse;margin-top:20px;"><thead><tr style="background:#112240;color:white;font-size:10px;"><th>S.No</th><th>Date</th><th>Particulars</th><th>Expenses</th><th>Income</th><th>Remarks</th></tr></thead><tbody style="font-size:10px;"><tr style="background:#e6f2ff;font-weight:bold;"><td>A</td><td>-</td><td>Opening Balance (Prev Month)</td><td></td><td>₹${oB}</td><td>B/F</td></tr><tr style="background:#f4f8ff;"><td>A1</td><td>-</td><td>Amt received through water tankers</td><td></td><td>₹${wR}</td><td>Creditors</td></tr><tr style="background:#f4f8ff;"><td>B</td><td>-</td><td>Maintenance total (Current Month)</td><td></td><td>₹${mR}</td><td>Collection</td></tr>${ex.map((e,i)=>`<tr><td>${i+1}</td><td>${e.date}</td><td>${e.vendor}</td><td>₹${e.amount}</td><td></td><td>${e.remarks}</td></tr>`).join('')}<tr style="font-weight:bold;background:#eee;"><td>C</td><td>-</td><td>Total Expenses</td><td>₹${tE}</td><td></td><td></td></tr><tr style="font-weight:bold;background:#eee;"><td>D</td><td>-</td><td>Total Income (A+A1+B)</td><td></td><td>₹${tI}</td><td></td></tr><tr style="background:#FFD700;font-weight:bold;font-size:12px;"><td>E</td><td>-</td><td>CLOSING BALANCE</td><td></td><td>₹${clB}</td><td>Cash in hand</td></tr></tbody></table><div style="margin-top:20px;border:1px solid #f87171;padding:10px;font-size:10px;background:#fff9f9;"><p style="color:#d9534f;font-weight:bold;">PENDING RECEIVABLES:</p><p>Water: ₹${twp} (F: ${wP.map(p=>p.flat).join(',')}) | Maint: ₹${tmp} (F: ${mP.map(p=>p.flat).join(',')})</p></div><p style="text-align:center;font-style:italic;font-size:9px;margin-top:30px;">Updated statement as on ${new Date().toLocaleString('en-IN')}</p></body></html>`;
 
-  const doOut = async () => { const { uri } = await Print.printToFileAsync({ html: getH() }); await Sharing.shareAsync(uri); };
+  const doOut = async () => { const { uri } = await Print.printToFileAsync({ html: getHTML() }); await Sharing.shareAsync(uri); };
+
+  const parseBill = (txt) => {
+    const lines = txt.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+    
+    // 1. DATE: Search for format DD/MM/YY
+    let dFound = todayStr();
+    const dMatch = txt.match(/\b(0[1-9]|[12]\d|3[01])[\/\-\.](0[1-9]|1[0-2])[\/\-\.](\d{4}|\d{2})\b/);
+    if (dMatch) dFound = dMatch[0].replace(/\./g, '/');
+
+    // 2. AMOUNT: Search for largest decimal number
+    let aFound = "";
+    const aMatch = txt.match(/\d+\.\d{2}/g);
+    if (aMatch) {
+      const nums = aMatch.map(n => parseFloat(n.replace(/,/g, ''))).filter(n => n > 5 && n < 999999);
+      if (nums.length > 0) aFound = String(Math.round(Math.max(...nums)));
+    }
+
+    // 3. VENDOR: First solid line
+    const skip = /invoice|bill|receipt|date|time|tax|gst/i;
+    const vLine = lines.find(l => /[a-zA-Z]{4,}/.test(l) && !skip.test(l));
+    const vFound = vLine ? vLine.replace(/[^a-zA-Z0-9 &]/g, '').substring(0, 25) : 'Unknown Vendor';
+
+    setBDate(dFound); setVend(vFound); setAmt(aFound); setRem('Auto-captured');
+  };
 
   const scan = async (type) => {
-    // 📸 Native Cropping is ON. Quality reduced to ensure file fits API limits.
-    let res = await (type === 'cam' ? ImagePicker.launchCameraAsync({ quality:0.4, allowsEditing:true }) : ImagePicker.launchImageLibraryAsync({ quality:0.4, allowsEditing:true }));
+    let res = await (type === 'cam' ? ImagePicker.launchCameraAsync({ quality: 1, allowsEditing: false }) : ImagePicker.launchImageLibraryAsync({ quality: 1, allowsEditing: false }));
     if (res.canceled) return;
     
-    setImg(res.assets[0].uri); setIsP(true); setV(''); setAmt(''); setRem('');
-    
+    setImg(res.assets[0].uri); setIsP(true); setOcrMsg('Compressing Image...');
     try {
-      const fd = new FormData(); 
-      // 🚀 UPLOADING AS A NATIVE FILE OBJECT (Fixes the OCR limit rejection bug)
-      fd.append('file', { uri: res.assets[0].uri, name: 'bill.jpg', type: 'image/jpeg' });
-      fd.append('OCREngine', '2');
-      fd.append('scale', 'true');
+      // SMART COMPRESSION: Shrink to 1200px width, 75% Quality
+      const compressed = await ImageManipulator.manipulateAsync(
+        res.assets[0].uri, [{ resize: { width: 1200 } }], { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      
+      setOcrMsg('AI Reading Text...');
+      const fd = new FormData(); fd.append('base64Image', `data:image/jpeg;base64,${compressed.base64}`); fd.append('OCREngine', '2');
       
       const api = await fetch('https://api.ocr.space/parse/image',{method:'POST',headers:{'apikey':API_KEY},body:fd});
-      const d = await api.json(); 
+      const data = await api.json();
       
-      if (d.IsErroredOnProcessing) {
-        setRem('OCR Limit Reached - Manual Edit');
-      } else {
-        const txt = d.ParsedResults?.[0]?.ParsedText || "";
-        
-        // Find largest decimal number (Targets totals like 3699.00)
-        const ns = txt.match(/\d+\.\d{2}/g);
-        const bA = ns ? String(Math.max(...ns.map(n=>parseFloat(n.replace(/,/g,''))).filter(n=>n>5))) : "";
-        
-        // Find Vendor Name (Skip common header words)
-        const lines = txt.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
-        const vLine = lines.find(l => /[a-zA-Z]{4,}/.test(l) && !/invoice|bill|receipt|date|time|tax|gst/i.test(l));
-        
-        setV(vLine ? vLine.substring(0,25) : 'New Bill'); 
-        setAmt(bA.split('.')[0] || ''); 
-        setRem('Auto-captured');
-      }
+      if (data.IsErroredOnProcessing) throw new Error("OCR Failed");
+      parseBill(data.ParsedResults?.[0]?.ParsedText || "");
+      
     } catch(e) { 
-      setRem('Network Error'); 
+      setBDate(todayStr()); setVend(''); setAmt(''); setRem('Manual entry needed');
     }
-    
     setIsP(false); setMV(true);
   };
 
@@ -86,22 +105,18 @@ export default function App() {
       <View style={s.he}>
         <Image source={require('./icon.png')} style={s.lo} />
         <View style={{flex:1}}><Text style={s.ti}>SAI BRUNDAVAN</Text><Text style={s.su}>APARTMENT ASSOCIATION</Text></View>
-        <View style={{flexDirection:'row'}}>
-          <TouchableOpacity onPress={doOut} style={s.bt}><FileText color="#FFD700" size={20}/></TouchableOpacity>
-          <TouchableOpacity onPress={doOut} style={[s.bt,{marginLeft:8}]}><Share2 color="#FFD700" size={20}/></TouchableOpacity>
-        </View>
+        <View style={{flexDirection:'row'}}><TouchableOpacity onPress={doOut} style={s.bt}><FileText color="#FFD700" size={20}/></TouchableOpacity><TouchableOpacity onPress={doOut} style={[s.bt,{marginLeft:8}]}><Share2 color="#FFD700" size={20}/></TouchableOpacity></View>
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={s.ro}><Text style={s.lb}>Month:</Text><TextInput style={s.mI} value={mon} onChangeText={setMon}/></View>
         <View style={s.ca}>
-          <Text style={s.ct}>Accounting Setup</Text>
-          <Text style={s.sl}>Opening Bal (A)</Text><TextInput style={s.in} keyboardType="numeric" value={oB} onChangeText={setOB}/>
+          <Text style={s.ct}>Income Setup</Text><Text style={s.sl}>Opening Bal (A)</Text><TextInput style={s.in} keyboardType="numeric" value={oB} onChangeText={setOB}/>
           <Text style={s.sl}>Water tankers (A1)</Text><TextInput style={s.in} keyboardType="numeric" value={wR} onChangeText={setWR}/>
           <TouchableOpacity style={s.ad} onPress={()=>{setPT('Water');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={s.at}>Add Pending Water</Text></TouchableOpacity>
-          <Text style={s.sl}>Maintenance (B)</Text><TextInput style={s.in} keyboardType="numeric" value={mR} onChangeText={setMR}/>
-          <TouchableOpacity style={s.ad} onPress={()=>{setPT('Maintenance');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={s.at}>Add Pending Maint</Text></TouchableOpacity>
+          <Text style={s.sl}>Maintenance Total (B)</Text><TextInput style={s.in} keyboardType="numeric" value={mR} onChangeText={setMR}/>
+          <TouchableOpacity style={s.ad} onPress={()=>{setPT('Maint');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={s.at}>Add Pending Maint</Text></TouchableOpacity>
         </View>
-        <View style={s.sm}><Text style={{color:'#8892b0'}}>Closing Balance (E)</Text><Text style={s.am}>₹{closingBalance.toLocaleString()}</Text></View>
+        <View style={s.sm}><Text style={{color:'#8892b0'}}>Closing Balance (E)</Text><Text style={s.am}>₹{clB.toLocaleString()}</Text></View>
         <Text style={s.st}>Expenditure Ledger</Text>
         {ex.map((e,i)=>(
           <View key={e.id} style={s.it}>
@@ -113,40 +128,28 @@ export default function App() {
         <View style={{height:150}}/>
       </ScrollView>
       <View style={s.fo}>
-        <View style={s.ac}><TouchableOpacity style={[s.fb,{backgroundColor:'#1d2d50'}]} onPress={()=>{setImg(null);setV('');setAmt('');setRem('');setMV(true)}}><Plus color="#FFD700"/></TouchableOpacity><Text style={s.fl}>Add manual</Text></View>
-        <View style={s.ac}><TouchableOpacity style={s.fb} onPress={()=>scan('lib')}><ImgIco color="#0A192F" size={24}/></TouchableOpacity><Text style={s.fl}>Gallery</Text></View>
-        <View style={s.ac}><TouchableOpacity style={s.fb} onPress={()=>scan('cam')}><Camera color="#0A192F" size={28}/></TouchableOpacity><Text style={s.fl}>Scan bill</Text></View>
+        <View style={s.ac}><TouchableOpacity style={[s.fb,{backgroundColor:'#1d2d50'}]} onPress={()=>{setImg(null);setVend('');setAmt('');setRem('');setBDate(todayStr());setMV(true)}}><Plus color="#FFD700"/></TouchableOpacity><Text style={s.fl}>Add manual</Text></View>
+        <View style={s.ac}><TouchableOpacity style={s.fb} onPress={()=>scan('lib')} disabled={isP}><ImgIco color="#0A192F" size={24}/></TouchableOpacity><Text style={s.fl}>Gallery</Text></View>
+        <View style={s.ac}><TouchableOpacity style={s.fb} onPress={()=>scan('cam')} disabled={isP}><Camera color="#0A192F" size={28}/></TouchableOpacity><Text style={s.fl}>Scan bill</Text></View>
       </View>
-
-      <Modal visible={pMV} transparent={true} animationType="fade">
-        <View style={s.ov}><View style={s.mc}>
-          <View style={s.mh}><Text style={{color:'#FFD700',fontWeight:'bold'}}>{pT} Pending</Text><TouchableOpacity onPress={()=>setPMV(false)}><X color="#fff"/></TouchableOpacity></View>
-          <TextInput placeholder="Flat No" placeholderTextColor="#8892b0" style={s.mi} value={f} onChangeText={setF}/>
-          <TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={s.mi} value={a} onChangeText={setA}/>
-          <TextInput placeholder="Month" placeholderTextColor="#8892b0" style={s.mi} value={m} onChangeText={setM}/>
-          <TouchableOpacity style={s.sb} onPress={()=>{const n={id:Date.now(),flat:f,amt:a,mon:m};pT==='Water'?setWP([...wP,n]):setMP([...mP,n]);setF('');setA('');setPMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Save</Text></TouchableOpacity>
-          <TouchableOpacity onPress={()=>setPMV(false)} style={s.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity>
-        </View></View>
-      </Modal>
-
-      <Modal visible={mV} transparent={true} animationType="slide">
-        <View style={s.ov}>
-          <ScrollView contentContainerStyle={s.mc} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <View style={s.ai}><Sparkles color="#FFD700" size={14}/><Text style={{color:'#FFD700',fontSize:10,marginLeft:5,flex:1}}>Verify auto-captured details correctly.</Text></View>
-            <View style={s.mh}><Text style={{color:'#fff',fontWeight:'bold'}}>Voucher Entry</Text><TouchableOpacity onPress={()=>setMV(false)}><X color="#fff"/></TouchableOpacity></View>
-            
-            {img && <Image source={{uri:img}} style={{width:'100%',height:350,borderRadius:10,marginBottom:15,backgroundColor:'#0a192f'}} resizeMode="contain"/>}
-            
-            <TextInput placeholder="Particulars" placeholderTextColor="#8892b0" style={s.mi} value={v} onChangeText={setV}/>
-            <TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={s.mi} value={amt} onChangeText={setAmt}/>
-            <TextInput placeholder="Remarks" placeholderTextColor="#8892b0" style={s.mi} value={rem} onChangeText={setRem}/>
-            <TouchableOpacity style={s.sb} onPress={()=>{setEx([{id:Date.now(),vendor:v,amount:parseInt(amt)||0,remarks:rem,date:new Date().toLocaleDateString('en-IN')},...ex]);setMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Verify & Save</Text></TouchableOpacity>
-            <TouchableOpacity onPress={()=>setMV(false)} style={s.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity>
-          </ScrollView>
-        </View>
-      </Modal>
-
-      {isP && <View style={s.ol}><ActivityIndicator size="large" color="#FFD700"/><Text style={{color:'#fff',marginTop:10}}>AI Scanning...</Text></View>}
+      <Modal visible={pMV} transparent={true} animationType="fade"><View style={s.ov}><View style={s.mc}>
+        <View style={s.mh}><Text style={{color:'#FFD700',fontWeight:'bold'}}>{pT} Pending</Text><TouchableOpacity onPress={()=>setPMV(false)}><X color="#fff"/></TouchableOpacity></View>
+        <TextInput placeholder="Flat No" placeholderTextColor="#8892b0" style={s.mi} value={f} onChangeText={setF}/><TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={s.mi} value={a} onChangeText={setA}/><TextInput placeholder="Month" placeholderTextColor="#8892b0" style={s.mi} value={m} onChangeText={setM}/>
+        <TouchableOpacity style={s.sb} onPress={()=>{const n={id:Date.now(),flat:f,amt:a,mon:m};pT==='Water'?setWP([...wP,n]):setMP([...mP,n]);setF('');setA('');setPMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Save</Text></TouchableOpacity>
+        <TouchableOpacity onPress={()=>setPMV(false)} style={s.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity>
+      </View></View></Modal>
+      <Modal visible={mV} transparent={true} animationType="slide"><View style={s.ov}><ScrollView contentContainerStyle={s.mc} showsVerticalScrollIndicator={false}>
+        <View style={s.ai}><Sparkles color="#FFD700" size={14}/><Text style={{color:'#FFD700',fontSize:10,marginLeft:5,flex:1}}>Verify details below.</Text></View>
+        <View style={s.mh}><Text style={{color:'#fff',fontWeight:'bold'}}>Voucher Entry</Text><TouchableOpacity onPress={()=>setMV(false)}><X color="#fff"/></TouchableOpacity></View>
+        {img && <Image source={{uri:img}} style={{width:'100%',aspectRatio:0.6,borderRadius:10,marginBottom:15,backgroundColor:'#0a192f'}} resizeMode="contain"/>}
+        <TextInput placeholder="Date (DD/MM/YYYY)" placeholderTextColor="#8892b0" style={s.mi} value={bDate} onChangeText={setBDate}/>
+        <TextInput placeholder="Particulars" placeholderTextColor="#8892b0" style={s.mi} value={vend} onChangeText={setVend}/>
+        <TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={s.mi} value={amt} onChangeText={setAmt}/>
+        <TextInput placeholder="Remarks" placeholderTextColor="#8892b0" style={s.mi} value={rem} onChangeText={setRem}/>
+        <TouchableOpacity style={s.sb} onPress={()=>{setEx([{id:Date.now(),vendor:vend,amount:parseInt(amt)||0,remarks:rem,date:bDate},...ex]);setMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Verify & Save</Text></TouchableOpacity>
+        <TouchableOpacity onPress={()=>setMV(false)} style={s.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity>
+      </ScrollView></View></Modal>
+      {isP && <View style={s.ol}><ActivityIndicator size="large" color="#FFD700"/><Text style={{color:'#fff',marginTop:10,fontWeight:'bold'}}>{ocrMsg || 'Processing...'}</Text></View>}
     </SafeAreaView>
   );
 }
@@ -154,20 +157,20 @@ export default function App() {
 const s = StyleSheet.create({
   co: { flex: 1, backgroundColor: '#0A192F' },
   lC: { flex: 1, backgroundColor: '#0A192F', justifyContent: 'center', alignItems: 'center' },
-  lT: { color: '#fff', marginTop: 10 },
+  lT: { color: '#fff', marginTop: 10, fontWeight: 'bold' },
   he: { padding: 20, paddingTop: Platform.OS === 'ios' ? 10 : 50, backgroundColor: '#112240', flexDirection: 'row', alignItems: 'center' },
   lo: { width: 42, height: 42, borderRadius: 21, marginRight: 12, borderWidth: 1, borderColor: '#FFD700' },
-  ti: { color: '#FFD700', fontSize: 15, fontWeight: 'bold' },
+  ti: { color: '#FFD700', fontSize: 14, fontWeight: 'bold' },
   su: { color: '#fff', fontSize: 9 },
-  bt: { padding: 8, backgroundColor: '#1d2d50', borderRadius: 10 },
+  bt: { padding: 10, backgroundColor: '#1d2d50', borderRadius: 10 },
   ro: { flexDirection: 'row', alignItems: 'center', margin: 20, marginBottom: 5 },
   lb: { color: '#8892b0', fontSize: 13 },
   mI: { color: '#FFD700', fontWeight: 'bold', marginLeft: 8, fontSize: 14, flex: 1 },
   ca: { margin: 20, marginTop: 10, padding: 20, backgroundColor: '#112240', borderRadius: 15 },
-  ct: { color: '#FFD700', fontWeight: 'bold', fontSize: 14, marginBottom: 15 },
+  ct: { color: '#FFD700', fontWeight: 'bold', fontSize: 14, marginBottom: 10 },
   sl: { color: '#8892b0', fontSize: 11, marginTop: 10, marginBottom: 5 },
-  in: { backgroundColor: '#1d2d50', color: '#fff', padding: 12, borderRadius: 8, fontSize: 16 },
-  ad: { flexDirection: 'row', marginTop: 10, backgroundColor: '#0A192F', padding: 6, borderRadius: 6, alignSelf: 'flex-start', alignItems: 'center' },
+  in: { backgroundColor: '#1d2d50', color: '#fff', padding: 10, borderRadius: 8, fontSize: 16 },
+  ad: { flexDirection: 'row', marginTop: 8, backgroundColor: '#0A192F', padding: 8, borderRadius: 6, alignSelf: 'flex-start' },
   at: { color: '#FFD700', fontSize: 10, marginLeft: 6, fontWeight:'bold' },
   sum: { marginHorizontal: 20, padding: 25, borderRadius: 20, backgroundColor: '#1d2d50', borderLeftWidth: 5, borderLeftColor: '#FFD700', alignItems:'center' },
   am: { color: '#fff', fontSize: 38, fontWeight: 'bold', marginTop: 5 },
@@ -176,8 +179,8 @@ const s = StyleSheet.create({
   fo: { position: 'absolute', bottom: 20, width: '100%', flexDirection: 'row', justifyContent: 'center' },
   ac: { alignItems:'center', marginHorizontal: 15 },
   fb: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFD700', justifyContent: 'center', alignItems: 'center', elevation: 5 },
-  fl: { color: '#FFD700', fontSize: 9, marginTop: 8, fontWeight: 'bold' },
-  ov: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', padding: 20 },
+  fl: { color: '#FFD700', fontSize: 9, marginTop: 8, fontWeight:'bold' },
+  ov: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', padding: 15 },
   mc: { backgroundColor: '#112240', borderRadius: 20, padding: 25 },
   mh: { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:15 },
   mi: { backgroundColor: '#1d2d50', color: '#fff', padding: 12, borderRadius: 10, marginBottom: 12 },
