@@ -1,431 +1,188 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, SafeAreaView, Image, Modal, TextInput, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, SafeAreaView, Image, Modal, TextInput, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Camera, FileText, Trash2, Plus, Sparkles, UserPlus, X, Share2, Image as ImgIco } from 'lucide-react-native';
 
-const OCR_KEY = 'K81963065788957';
-const todayStr = () => new Date().toLocaleDateString('en-IN');
+const API_KEY = 'K81963065788957';
 
 export default function App() {
-  const [expenses, setExpenses] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [pendingModalVisible, setPendingModalVisible] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [ready, setReady] = useState(false);
-  const[ocrMsg, setOcrMsg] = useState('');
-
-  const [month, setMonth] = useState(new Date().toLocaleString('default', { month: 'long', year: 'numeric' }));
-  const [openingBalance, setOpeningBalance] = useState('16725');
-  const [waterReceived, setWaterReceived] = useState('6597');
-  const [maintReceived, setMaintReceived] = useState('22800');
-
-  const [waterPendings, setWaterPendings] = useState([]);
-  const[maintPendings, setMaintPendings] = useState([]);
-  const [pendingType, setPendingType] = useState('Water');
-
-  const [pFlat, setPFlat] = useState('');
-  const[pAmount, setPAmount] = useState('');
-  const [pMonth, setPMonth] = useState('');
+  const [ex, setEx] = useState([]);
+  const [mV, setMV] = useState(false);
+  const [pMV, setPMV] = useState(false);
+  const [isP, setIsP] = useState(false);
+  const[ready, setReady] = useState(false);
+  const [mon, setMon] = useState(new Date().toLocaleString('default',{month:'long',year:'numeric'}));
   
-  const [vendor, setVendor] = useState('');
-  const [amount, setAmount] = useState('');
-  const [remarks, setRemarks] = useState('');
-  const [billDate, setBillDate] = useState(todayStr());
-  const [currentImage, setCurrentImage] = useState(null);
+  const [oB, setOB] = useState('16725');
+  const [wR, setWR] = useState('6597');
+  const [mR, setMR] = useState('22800');
+  const[wP, setWP] = useState([]);
+  const [mP, setMP] = useState([]);
+  const [pT, setPT] = useState('Water'); 
 
-  useEffect(() => {
-    setTimeout(() => setReady(true), 1500);
-  },[]);
+  const [f, setF] = useState(''); const [a, setA] = useState(''); const [m, setM] = useState('');
+  const [v, setV] = useState(''); const [amt, setAmt] = useState(''); const [rem, setRem] = useState('');
+  const [img, setImg] = useState(null);
 
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const totalIncome = (parseFloat(openingBalance) || 0) + (parseFloat(waterReceived) || 0) + (parseFloat(maintReceived) || 0);
-  const closingBalance = totalIncome - totalExpenses;
-  const totalWaterPending = waterPendings.reduce((s, p) => s + (parseFloat(p.amt) || 0), 0);
-  const totalMaintPending = maintPendings.reduce((s, p) => s + (parseFloat(p.amt) || 0), 0);
+  useEffect(() => { setTimeout(() => setReady(true), 1000); },[]);
 
-  const generateHTML = () => {
-    return `
-      <html>
-        <head>
-          <style>
-            body { font-family: Helvetica; padding: 20px; color: #333; }
-            .header { text-align: center; border-bottom: 4px solid #FFD700; padding-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th { background-color: #112240; color: white; padding: 10px; border: 1px solid #ddd; text-align: left; font-size: 10px; }
-            td { padding: 10px; border: 1px solid #ddd; font-size: 10px; }
-            .opening-row { background-color: #e6f2ff; font-weight: bold; }
-            .income-row { background-color: #f4f8ff; font-weight: bold; }
-            .closing-row { background-color: #FFD700; color: #000; font-weight: bold; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1 style="color:#112240;font-size:18px;">SAI BRUNDAVAN APARTMENT ASSOCIATION</h1>
-            <p><b>ACCOUNTS STATEMENT - ${month.toUpperCase()}</b></p>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>S.No</th><th>Date</th><th>Particulars</th><th>Expenses</th><th>Income</th><th>Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="opening-row">
-                <td>A</td><td>-</td><td>Opening Balance (Prev Month)</td><td></td><td>&#8377;${openingBalance}</td><td>B/F</td>
-              </tr>
-              <tr class="income-row">
-                <td>A1</td><td>-</td><td>Amount received through water tankers</td><td></td><td>&#8377;${waterReceived}</td><td>Creditors</td>
-              </tr>
-              <tr class="income-row">
-                <td>B</td><td>-</td><td>Maintenance total (Current Month)</td><td></td><td>&#8377;${maintReceived}</td><td>Collection</td>
-              </tr>
-              ${expenses.map((e, i) => `<tr><td>${i + 1}</td><td>${e.date}</td><td>${e.vendor}</td><td>&#8377;${e.amount}</td><td></td><td>${e.remarks}</td></tr>`).join('')}
-              <tr style="font-weight:bold; background:#eee;">
-                <td>C</td><td>-</td><td>Total Expenses</td><td>&#8377;${totalExpenses}</td><td></td><td></td>
-              </tr>
-              <tr style="font-weight:bold; background:#eee;">
-                <td>D</td><td>-</td><td>Total Income (A+A1+B)</td><td></td><td>&#8377;${totalIncome}</td><td></td>
-              </tr>
-              <tr class="closing-row">
-                <td>E</td><td>-</td><td>CLOSING BALANCE</td><td></td><td>&#8377;${closingBalance}</td><td>Cash in hand</td>
-              </tr>
-            </tbody>
-          </table>
-          <div style="margin-top:20px; border:1px solid #f87171; padding:15px; border-radius:8px; background:#fff9f9;">
-            <p style="color:#d9534f; font-weight:bold; font-size:12px; margin:0 0 8px 0;">RECEIVABLES SUMMARY (PENDING DUES):</p>
-            <p style="font-size:11px;"><b>Water Pending: &#8377;${totalWaterPending}</b> (Flats: ${waterPendings.map(p => p.flat).join(', ') || 'Nil'})</p>
-            <p style="font-size:11px; margin-top:5px;"><b>Maintenance Pending: &#8377;${totalMaintPending}</b> (Flats: ${maintPendings.map(p => p.flat).join(', ') || 'Nil'})</p>
-          </div>
-          <p style="text-align:center; font-style:italic; font-size:9px; margin-top:30px;">
-            Updated statement as on ${new Date().toLocaleString('en-IN')}
-          </p>
-        </body>
-      </html>
-    `;
-  };
+  const tE = ex.reduce((s, e) => s + e.amount, 0);
+  const tI = (parseFloat(oB)||0) + (parseFloat(wR)||0) + (parseFloat(mR)||0);
+  const closingBalance = tI - tE;
+  const totWP = wP.reduce((s, p) => s + (parseFloat(p.amt)||0), 0);
+  const totMP = mP.reduce((s, p) => s + (parseFloat(p.amt)||0), 0);
 
-  const handleShare = async () => {
+  const getH = () => `<html><body style="font-family:Helvetica;padding:20px;color:#333;"><div style="text-align:center;border-bottom:4px solid #FFD700;padding-bottom:10px;"><h1>SAI BRUNDAVAN APARTMENT ASSOCIATION</h1><p><b>ACCOUNTS STATEMENT - ${mon.toUpperCase()}</b></p></div><table style="width:100%;border-collapse:collapse;margin-top:20px;"><thead><tr style="background:#112240;color:white;font-size:10px;"><th>S.No</th><th>Date</th><th>Particulars</th><th>Expenses</th><th>Income</th><th>Remarks</th></tr></thead><tbody style="font-size:10px;"><tr style="background:#e6f2ff;font-weight:bold;"><td>A</td><td>-</td><td>Opening Balance (Prev Month)</td><td></td><td>₹${oB}</td><td>B/F</td></tr><tr style="background:#f4f8ff;"><td>A1</td><td>-</td><td>Amt received through water tankers</td><td></td><td>₹${wR}</td><td>Creditors</td></tr><tr style="background:#f4f8ff;"><td>B</td><td>-</td><td>Maintenance total (Current Month)</td><td></td><td>₹${mR}</td><td>Collection</td></tr>${ex.map((e,i)=>`<tr><td>${i+1}</td><td>${e.date}</td><td>${e.vendor}</td><td>₹${e.amount}</td><td></td><td>${e.remarks}</td></tr>`).join('')}<tr style="font-weight:bold;background:#eee;"><td>C</td><td>-</td><td>Total Expenses</td><td>₹${tE}</td><td></td><td></td></tr><tr style="font-weight:bold;background:#eee;"><td>D</td><td>-</td><td>Total Income (A+A1+B)</td><td></td><td>₹${tI}</td><td></td></tr><tr style="background:#FFD700;font-weight:bold;font-size:12px;"><td>E</td><td>-</td><td>CLOSING BALANCE</td><td></td><td>₹${closingBalance}</td><td>Cash in hand</td></tr></tbody></table><div style="margin-top:20px;border:1px solid #f87171;padding:10px;font-size:10px;background:#fff9f9;"><p style="color:#d9534f;font-weight:bold;">PENDING RECEIVABLES:</p><p>Water: ₹${totWP} (F: ${wP.map(p=>p.flat).join(',')}) | Maint: ₹${totMP} (F: ${mP.map(p=>p.flat).join(',')})</p></div><p style="text-align:center;font-style:italic;font-size:9px;margin-top:30px;">Updated statement as on ${new Date().toLocaleString('en-IN')}</p></body></html>`;
+
+  const doOut = async () => { const { uri } = await Print.printToFileAsync({ html: getH() }); await Sharing.shareAsync(uri); };
+
+  const scan = async (type) => {
+    // 📸 Native Cropping is ON. Quality reduced to ensure file fits API limits.
+    let res = await (type === 'cam' ? ImagePicker.launchCameraAsync({ quality:0.4, allowsEditing:true }) : ImagePicker.launchImageLibraryAsync({ quality:0.4, allowsEditing:true }));
+    if (res.canceled) return;
+    
+    setImg(res.assets[0].uri); setIsP(true); setV(''); setAmt(''); setRem('');
+    
     try {
-      const { uri } = await Print.printToFileAsync({ html: generateHTML() });
-      await Sharing.shareAsync(uri);
-    } catch (error) {
-      Alert.alert("Error", "Could not generate PDF");
-    }
-  };
-
-  const parseBillText = (txt) => {
-    const lines = txt.split('\n').map(l => l.trim()).filter(l => l.length > 1);
-
-    const skipVendor = /^(invoice|bill|receipt|date|time|gst|gstin|tax|phone|mobile|mob|email|address|counter|serve)/i;
-    const vendorLine = lines.find(l => /[a-zA-Z]{3,}/.test(l) && !skipVendor.test(l.trim()));
-    const parsedVendor = vendorLine ? vendorLine.replace(/[^a-zA-Z0-9 &'.\-]/g, '').trim().substring(0, 35) : 'New Bill';
-    
-    let parsedAmount = '';
-    const amtPatterns = [
-      /grand\s*total[\s:\-]*([\d,]+\.?\d*)/i,
-      /net\s*(?:payable|amount|total)[\s:\-]*([\d,]+\.?\d*)/i,
-      /total\s*(?:amount|payable|due)[\s:\-]*([\d,]+\.?\d*)/i,
-      /amount\s*(?:payable|due|total)[\s:\-]*([\d,]+\.?\d*)/i,
-      /(?:^|\s)total[\s:\-]+([\d,]+\.?\d*)/i,
-    ];
-    
-    outer:
-    for (const line of lines) {
-      for (const pat of amtPatterns) {
-        const m = line.match(pat);
-        if (m) {
-          const n = parseFloat(m[1].replace(/,/g, ''));
-          if (n > 1) { parsedAmount = String(Math.round(n)); break outer; }
-        }
-      }
-    }
-    
-    if (!parsedAmount) {
-      const decimals = (txt.match(/[\d,]+\.\d{2}/g) ||[]).map(n => parseFloat(n.replace(/,/g, ''))).filter(n => n > 5 && n < 9999999);
-      if (decimals.length) parsedAmount = String(Math.round(Math.max(...decimals)));
-    }
-
-    let parsedDate = new Date().toLocaleDateString('en-IN');
-    const monthNames = { jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06', jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12' };
-    
-    for (const line of lines) {
-      let m = line.match(/\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\b/);
-      if (m) {
-        const dd = m[1].padStart(2,'0');
-        const mm = m[2].padStart(2,'0');
-        const yr = m[3].length === 2 ? `20${m[3]}` : m[3];
-        parsedDate = `${dd}/${mm}/${yr}`;
-        break;
-      }
-      m = line.match(/\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})\b/i);
-      if (m) {
-        const dd = m[1].padStart(2,'0');
-        const mm = monthNames[m[2].toLowerCase().substring(0,3)];
-        parsedDate = `${dd}/${mm}/${m[3]}`;
-        break;
-      }
-    }
-
-    setVendor(parsedVendor);
-    setAmount(parsedAmount);
-    setBillDate(parsedDate);
-    setRemarks('Verified via OCR');
-  };
-
-  const handleScan = async (type) => {
-    try {
-      const opt = { quality: 1, allowsEditing: false };
-      const res = type === 'cam' ? await ImagePicker.launchCameraAsync(opt) : await ImagePicker.launchImageLibraryAsync(opt);
-      
-      if (res.canceled) return;
-      
-      setVendor(''); setAmount(''); setRemarks(''); setBillDate(todayStr());
-      setCurrentImage(res.assets[0].uri);
-      setIsProcessing(true);
-      setOcrMessage('Compressing image...');
-
-      const compressed = await ImageManipulator.manipulateAsync(
-        res.assets[0].uri,
-        [{ resize: { width: 800 } }],
-        { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
-
-      setOcrMessage('Reading text from bill...');
-      const fd = new FormData();
-      fd.append('base64Image', `data:image/jpeg;base64,${compressed.base64}`);
+      const fd = new FormData(); 
+      // 🚀 UPLOADING AS A NATIVE FILE OBJECT (Fixes the OCR limit rejection bug)
+      fd.append('file', { uri: res.assets[0].uri, name: 'bill.jpg', type: 'image/jpeg' });
       fd.append('OCREngine', '2');
+      fd.append('scale', 'true');
       
-      const apiRes = await fetch('https://api.ocr.space/parse/image', {
-        method: 'POST',
-        headers: { 'apikey': API_KEY },
-        body: fd
-      });
+      const api = await fetch('https://api.ocr.space/parse/image',{method:'POST',headers:{'apikey':API_KEY},body:fd});
+      const d = await api.json(); 
       
-      const data = await apiRes.json();
-      const rawText = data.ParsedResults?.[0]?.ParsedText || '';
-      
-      parseBillText(rawText);
-      setOcrMessage('Please verify the details below.');
-    } catch (e) {
-      console.log(e);
-      setOcrMessage('Could not read bill. Please enter manually.');
-    } finally {
-      setIsProcessing(false);
-      setModalVisible(true);
+      if (d.IsErroredOnProcessing) {
+        setRem('OCR Limit Reached - Manual Edit');
+      } else {
+        const txt = d.ParsedResults?.[0]?.ParsedText || "";
+        
+        // Find largest decimal number (Targets totals like 3699.00)
+        const ns = txt.match(/\d+\.\d{2}/g);
+        const bA = ns ? String(Math.max(...ns.map(n=>parseFloat(n.replace(/,/g,''))).filter(n=>n>5))) : "";
+        
+        // Find Vendor Name (Skip common header words)
+        const lines = txt.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+        const vLine = lines.find(l => /[a-zA-Z]{4,}/.test(l) && !/invoice|bill|receipt|date|time|tax|gst/i.test(l));
+        
+        setV(vLine ? vLine.substring(0,25) : 'New Bill'); 
+        setAmt(bA.split('.')[0] || ''); 
+        setRem('Auto-captured');
+      }
+    } catch(e) { 
+      setRem('Network Error'); 
     }
+    
+    setIsP(false); setMV(true);
   };
 
-  if (!ready) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FFD700" />
-        <Text style={styles.loadingText}>SBA Accounts Loading...</Text>
-      </View>
-    );
-  }
+  if(!ready) return <View style={s.lC}><ActivityIndicator size="large" color="#FFD700"/><Text style={s.lT}>SBA Accounts Loading...</Text></View>;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Image source={require('./icon.png')} style={styles.logoImg} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.fullTitle}>SAI BRUNDAVAN</Text>
-          <Text style={styles.subTitle}>APARTMENT ASSOCIATION</Text>
-        </View>
-        <View style={{ flexDirection: 'row' }}>
-          <TouchableOpacity onPress={handleShare} style={styles.reportBtn}>
-            <FileText color="#FFD700" size={20} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleShare} style={[styles.reportBtn, { marginLeft: 8 }]}>
-            <Share2 color="#FFD700" size={20} />
-          </TouchableOpacity>
+    <SafeAreaView style={s.co}>
+      <View style={s.he}>
+        <Image source={require('./icon.png')} style={s.lo} />
+        <View style={{flex:1}}><Text style={s.ti}>SAI BRUNDAVAN</Text><Text style={s.su}>APARTMENT ASSOCIATION</Text></View>
+        <View style={{flexDirection:'row'}}>
+          <TouchableOpacity onPress={doOut} style={s.bt}><FileText color="#FFD700" size={20}/></TouchableOpacity>
+          <TouchableOpacity onPress={doOut} style={[s.bt,{marginLeft:8}]}><Share2 color="#FFD700" size={20}/></TouchableOpacity>
         </View>
       </View>
-
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.monthCard}>
-          <Text style={styles.label}>Month:</Text>
-          <TextInput style={styles.monthInput} value={month} onChangeText={setMonth} />
+        <View style={s.ro}><Text style={s.lb}>Month:</Text><TextInput style={s.mI} value={mon} onChangeText={setMon}/></View>
+        <View style={s.ca}>
+          <Text style={s.ct}>Accounting Setup</Text>
+          <Text style={s.sl}>Opening Bal (A)</Text><TextInput style={s.in} keyboardType="numeric" value={oB} onChangeText={setOB}/>
+          <Text style={s.sl}>Water tankers (A1)</Text><TextInput style={s.in} keyboardType="numeric" value={wR} onChangeText={setWR}/>
+          <TouchableOpacity style={s.ad} onPress={()=>{setPT('Water');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={s.at}>Add Pending Water</Text></TouchableOpacity>
+          <Text style={s.sl}>Maintenance (B)</Text><TextInput style={s.in} keyboardType="numeric" value={mR} onChangeText={setMR}/>
+          <TouchableOpacity style={s.ad} onPress={()=>{setPT('Maintenance');setPMV(true)}}><UserPlus size={12} color="#FFD700"/><Text style={s.at}>Add Pending Maint</Text></TouchableOpacity>
         </View>
-
-        <View style={styles.setupCard}>
-          <Text style={styles.cardTitle}>Statement Setup (Income & Dues)</Text>
-          
-          <Text style={styles.smallLabel}>Opening Bal (A)</Text>
-          <TextInput style={styles.input} keyboardType="numeric" value={openingBalance} onChangeText={setOpeningBalance} />
-          
-          <Text style={styles.smallLabel}>Water tankers received (A1)</Text>
-          <TextInput style={styles.input} keyboardType="numeric" value={waterReceived} onChangeText={setWaterReceived} />
-          <TouchableOpacity style={styles.addBtn} onPress={() => { setPendingType('Water'); setPendingModalVisible(true); }}>
-            <UserPlus size={12} color="#FFD700" />
-            <Text style={styles.addBtnText}>Add Pending Water Dues</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.smallLabel}>Maintenance Total (B)</Text>
-          <TextInput style={styles.input} keyboardType="numeric" value={maintReceived} onChangeText={setMaintReceived} />
-          <TouchableOpacity style={styles.addBtn} onPress={() => { setPendingType('Maintenance'); setPendingModalVisible(true); }}>
-            <UserPlus size={12} color="#FFD700" />
-            <Text style={styles.addBtnText}>Add Pending Maintenance</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.summaryCard}>
-          <Text style={{ color: '#8892b0' }}>Closing Balance (E)</Text>
-          <Text style={styles.totalAmount}>₹{closingBalance.toLocaleString()}</Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>Expenditure Ledger</Text>
-        {expenses.map((e, idx) => (
-          <View key={e.id} style={styles.item}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>{idx + 1}. {e.vendor}</Text>
-              <Text style={{ color: '#8892b0', fontSize: 11 }}>{e.date}</Text>
-            </View>
-            <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 16 }}>₹{e.amount}</Text>
-            <TouchableOpacity onPress={() => setExpenses(expenses.filter(x => x.id !== e.id))}>
-              <Trash2 size={18} color="#f87171" style={{ marginLeft: 15 }} />
-            </TouchableOpacity>
+        <View style={s.sm}><Text style={{color:'#8892b0'}}>Closing Balance (E)</Text><Text style={s.am}>₹{closingBalance.toLocaleString()}</Text></View>
+        <Text style={s.st}>Expenditure Ledger</Text>
+        {ex.map((e,i)=>(
+          <View key={e.id} style={s.it}>
+            <View style={{flex:1}}><Text style={{color:'#fff'}}>{i+1}. {e.vendor}</Text><Text style={{color:'#8892b0',fontSize:10}}>{e.date}</Text></View>
+            <Text style={{color:'#FFD700',fontWeight:'bold'}}>₹{e.amount}</Text>
+            <TouchableOpacity onPress={()=>setEx(ex.filter(x=>x.id!==e.id))}><Trash2 size={16} color="#f87171" style={{marginLeft:10}}/></TouchableOpacity>
           </View>
         ))}
-        <View style={{ height: 160 }} />
+        <View style={{height:150}}/>
       </ScrollView>
-
-      <View style={styles.footer}>
-        <View style={styles.actionCol}>
-          <TouchableOpacity style={[styles.fab, { backgroundColor: '#1d2d50' }]} onPress={() => { setCurrentImage(null); setVendor(''); setAmount(''); setRemarks(''); setBillDate(todayStr()); setModalVisible(true); }}>
-            <Plus color="#FFD700" size={28} />
-          </TouchableOpacity>
-          <Text style={styles.fabLabel}>Add manual</Text>
-        </View>
-        <View style={styles.actionCol}>
-          <TouchableOpacity style={[styles.fab, { backgroundColor: '#1d2d50' }]} onPress={() => handleScan('lib')}>
-            <ImgIco color="#0A192F" size={24} />
-          </TouchableOpacity>
-          <Text style={styles.fabLabel}>Gallery</Text>
-        </View>
-        <View style={styles.actionCol}>
-          <TouchableOpacity style={styles.fab} onPress={() => handleScan('cam')}>
-            <Camera color="#0A192F" size={28} />
-          </TouchableOpacity>
-          <Text style={styles.fabLabel}>Scan Bill</Text>
-        </View>
+      <View style={s.fo}>
+        <View style={s.ac}><TouchableOpacity style={[s.fb,{backgroundColor:'#1d2d50'}]} onPress={()=>{setImg(null);setV('');setAmt('');setRem('');setMV(true)}}><Plus color="#FFD700"/></TouchableOpacity><Text style={s.fl}>Add manual</Text></View>
+        <View style={s.ac}><TouchableOpacity style={s.fb} onPress={()=>scan('lib')}><ImgIco color="#0A192F" size={24}/></TouchableOpacity><Text style={s.fl}>Gallery</Text></View>
+        <View style={s.ac}><TouchableOpacity style={s.fb} onPress={()=>scan('cam')}><Camera color="#0A192F" size={28}/></TouchableOpacity><Text style={s.fl}>Scan bill</Text></View>
       </View>
 
-      {/* PENDING DUES MODAL */}
-      <Modal visible={pendingModalVisible} transparent={true} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={{ color: '#FFD700', fontWeight: 'bold', fontSize: 18 }}>{pendingType} Pending</Text>
-              <TouchableOpacity onPress={() => setPendingModalVisible(false)}><X color="#fff" /></TouchableOpacity>
-            </View>
-            <Text style={styles.fieldLabel}>Flat Number</Text>
-            <TextInput placeholder="e.g. 504" placeholderTextColor="#8892b0" style={styles.modalInput} value={pFlat} onChangeText={setPFlat} />
-            <Text style={styles.fieldLabel}>Amount Pending</Text>
-            <TextInput placeholder="₹" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.modalInput} value={pAmount} onChangeText={setPAmount} />
-            <Text style={styles.fieldLabel}>Month</Text>
-            <TextInput placeholder="e.g. June-July" placeholderTextColor="#8892b0" style={styles.modalInput} value={pMonth} onChangeText={setPMonth} />
-            <TouchableOpacity style={styles.saveBtn} onPress={() => {
-              const n = { id: Date.now(), flat: pFlat, amt: pAmount, mon: pMonth };
-              pendingType === 'Water' ? setWaterPendings([...waterPendings, n]) : setMaintPendings([...maintPendings, n]);
-              setPFlat(''); setPAmount(''); setPMonth('');
-              setPendingModalVisible(false);
-            }}>
-              <Text style={styles.saveBtnText}>Save</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      <Modal visible={pMV} transparent={true} animationType="fade">
+        <View style={s.ov}><View style={s.mc}>
+          <View style={s.mh}><Text style={{color:'#FFD700',fontWeight:'bold'}}>{pT} Pending</Text><TouchableOpacity onPress={()=>setPMV(false)}><X color="#fff"/></TouchableOpacity></View>
+          <TextInput placeholder="Flat No" placeholderTextColor="#8892b0" style={s.mi} value={f} onChangeText={setF}/>
+          <TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={s.mi} value={a} onChangeText={setA}/>
+          <TextInput placeholder="Month" placeholderTextColor="#8892b0" style={s.mi} value={m} onChangeText={setM}/>
+          <TouchableOpacity style={s.sb} onPress={()=>{const n={id:Date.now(),flat:f,amt:a,mon:m};pT==='Water'?setWP([...wP,n]):setMP([...mP,n]);setF('');setA('');setPMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Save</Text></TouchableOpacity>
+          <TouchableOpacity onPress={()=>setPMV(false)} style={s.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity>
+        </View></View>
       </Modal>
 
-      {/* VOUCHER MODAL */}
-      <Modal visible={modalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <ScrollView contentContainerStyle={styles.modalScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <View style={styles.aiAlert}>
-              <Sparkles color="#FFD700" size={16} />
-              <Text style={{ color: ocrMsg.startsWith('⚠️') ? '#f87171' : '#FFD700', fontSize: 11, marginLeft: 8, flex: 1 }}>{ocrMsg || 'Enter bill details.'}</Text>
-            </View>
-            <View style={styles.modalHeader}>
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Voucher Entry</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}><X color="#fff" /></TouchableOpacity>
-            </View>
+      <Modal visible={mV} transparent={true} animationType="slide">
+        <View style={s.ov}>
+          <ScrollView contentContainerStyle={s.mc} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <View style={s.ai}><Sparkles color="#FFD700" size={14}/><Text style={{color:'#FFD700',fontSize:10,marginLeft:5,flex:1}}>Verify auto-captured details correctly.</Text></View>
+            <View style={s.mh}><Text style={{color:'#fff',fontWeight:'bold'}}>Voucher Entry</Text><TouchableOpacity onPress={()=>setMV(false)}><X color="#fff"/></TouchableOpacity></View>
             
-            {currentImage && (
-              <Image source={{ uri: currentImage }} style={styles.billImage} resizeMode="contain" />
-            )}
-
-            <Text style={styles.fieldLabel}>Date</Text>
-            <TextInput placeholder="DD/MM/YYYY" placeholderTextColor="#8892b0" style={styles.modalInput} value={billDate} onChangeText={setBillDate} />
-            <Text style={styles.fieldLabel}>Particulars</Text>
-            <TextInput placeholder="Vendor Name" placeholderTextColor="#8892b0" style={styles.modalInput} value={vendor} onChangeText={setVendor} />
-            <Text style={styles.fieldLabel}>Amount</Text>
-            <TextInput placeholder="₹" placeholderTextColor="#8892b0" keyboardType="numeric" style={styles.modalInput} value={amount} onChangeText={setAmount} />
-            <Text style={styles.fieldLabel}>Remarks</Text>
-            <TextInput placeholder="Remarks" placeholderTextColor="#8892b0" style={styles.modalInput} value={remarks} onChangeText={setRemarks} />
+            {img && <Image source={{uri:img}} style={{width:'100%',height:350,borderRadius:10,marginBottom:15,backgroundColor:'#0a192f'}} resizeMode="contain"/>}
             
-            <TouchableOpacity style={styles.saveBtn} onPress={() => {
-              if (!vendor || !amount) { Alert.alert("Required", "Please enter Particulars and Amount."); return; }
-              setExpenses([{ id: Date.now(), vendor: vendor, amount: parseInt(amount) || 0, remarks: remarks, date: billDate }, ...expenses]);
-              setModalVisible(false);
-            }}>
-              <Text style={styles.saveBtnText}>Verify & Save</Text>
-            </TouchableOpacity>
+            <TextInput placeholder="Particulars" placeholderTextColor="#8892b0" style={s.mi} value={v} onChangeText={setV}/>
+            <TextInput placeholder="Amount" placeholderTextColor="#8892b0" keyboardType="numeric" style={s.mi} value={amt} onChangeText={setAmt}/>
+            <TextInput placeholder="Remarks" placeholderTextColor="#8892b0" style={s.mi} value={rem} onChangeText={setRem}/>
+            <TouchableOpacity style={s.sb} onPress={()=>{setEx([{id:Date.now(),vendor:v,amount:parseInt(amt)||0,remarks:rem,date:new Date().toLocaleDateString('en-IN')},...ex]);setMV(false)}}><Text style={{color:'#0A192F',fontWeight:'bold'}}>Verify & Save</Text></TouchableOpacity>
+            <TouchableOpacity onPress={()=>setMV(false)} style={s.gb}><Text style={{color:'#8892b0'}}>Go Back</Text></TouchableOpacity>
           </ScrollView>
         </View>
       </Modal>
 
-      {isProcessing && (
-        <View style={styles.processingOverlay}>
-          <ActivityIndicator size="large" color="#FFD700" />
-          <Text style={styles.processingText}>{ocrMsg || 'Processing...'}</Text>
-        </View>
-      )}
+      {isP && <View style={s.ol}><ActivityIndicator size="large" color="#FFD700"/><Text style={{color:'#fff',marginTop:10}}>AI Scanning...</Text></View>}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A192F' },
-  loadingContainer: { flex: 1, backgroundColor: '#0A192F', justifyContent: 'center', alignItems: 'center' },
-  loadingText: { color: '#fff', marginTop: 10, fontWeight: 'bold' },
-  header: { padding: 20, paddingTop: Platform.OS === 'ios' ? 10 : 50, backgroundColor: '#112240', flexDirection: 'row', alignItems: 'center' },
-  logoImg: { width: 42, height: 42, borderRadius: 21, marginRight: 12, borderWidth: 1, borderColor: '#FFD700' },
-  fullTitle: { color: '#FFD700', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },
-  subTitle: { color: '#fff', fontSize: 9, letterSpacing: 0.5 },
-  reportBtn: { padding: 8, backgroundColor: '#1d2d50', borderRadius: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', margin: 20, marginBottom: 5 },
-  label: { color: '#8892b0', fontSize: 13 },
-  monthInput: { color: '#FFD700', fontWeight: 'bold', marginLeft: 8, fontSize: 14, flex: 1 },
-  setupCard: { margin: 20, marginTop: 10, padding: 20, backgroundColor: '#112240', borderRadius: 15 },
-  cardTitle: { color: '#FFD700', fontWeight: 'bold', fontSize: 14, marginBottom: 15 },
-  smallLabel: { color: '#8892b0', fontSize: 11, marginTop: 10, marginBottom: 5 },
-  input: { backgroundColor: '#1d2d50', color: '#fff', padding: 12, borderRadius: 8, fontSize: 16 },
-  addBtn: { flexDirection: 'row', marginTop: 10, alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#0A192F', padding: 6, borderRadius: 6 },
-  addBtnText: { color: '#FFD700', fontSize: 10, marginLeft: 6, fontWeight: 'bold' },
-  summaryCard: { marginHorizontal: 20, padding: 25, borderRadius: 20, backgroundColor: '#1d2d50', borderLeftWidth: 5, borderLeftColor: '#FFD700', alignItems: 'center' },
-  totalAmount: { color: '#fff', fontSize: 38, fontWeight: 'bold', marginTop: 5 },
-  sectionTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold', margin: 20 },
-  item: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#112240', marginHorizontal: 20, marginBottom: 12, borderRadius: 12 },
-  itemTitle: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
-  itemDate: { color: '#8892b0', fontSize: 11, marginTop: 2 },
-  itemPrice: { color: '#FFD700', fontWeight: 'bold', fontSize: 18 },
-  footer: { position: 'absolute', bottom: 20, width: '100%', flexDirection: 'row', justifyContent: 'center' },
-  actionCol: { alignItems: 'center', marginHorizontal: 15 },
-  fab: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFD700', justifyContent: 'center', alignItems: 'center', elevation: 5 },
-  fabLabel: { color: '#FFD700', fontSize: 9, marginTop: 8, fontWeight: 'bold' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#112240', borderRadius: 20, padding: 25 },
-  modalScroll: { backgroundColor: '#112240', borderRadius: 20, padding: 20 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  aiAlert: { backgroundColor: '#1d2d50', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
-  modalInput: { backgroundColor: '#1d2d50', color: '#fff', padding: 12, borderRadius: 10, marginBottom: 12 },
-  fieldLabel: { color: '#8892b0', fontSize: 10, marginBottom: 4 },
-  billImage: { width: '100%', aspectRatio: 0.7, borderRadius: 10, marginBottom: 15, backgroundColor: '#0a192f' },
-  saveBtn: { backgroundColor: '#FFD700', padding: 16, borderRadius: 12, marginTop: 15, alignItems: 'center' },
-  saveBtnText: { color: '#0A192F', fontWeight: 'bold', fontSize: 16 },
-  processingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,25,47,0.95)', justifyContent: 'center', alignItems: 'center', zIndex: 99 },
-  processingText: { color: '#FFD700', marginTop: 12, fontWeight: 'bold', fontSize: 14 }
+const s = StyleSheet.create({
+  co: { flex: 1, backgroundColor: '#0A192F' },
+  lC: { flex: 1, backgroundColor: '#0A192F', justifyContent: 'center', alignItems: 'center' },
+  lT: { color: '#fff', marginTop: 10 },
+  he: { padding: 20, paddingTop: Platform.OS === 'ios' ? 10 : 50, backgroundColor: '#112240', flexDirection: 'row', alignItems: 'center' },
+  lo: { width: 42, height: 42, borderRadius: 21, marginRight: 12, borderWidth: 1, borderColor: '#FFD700' },
+  ti: { color: '#FFD700', fontSize: 15, fontWeight: 'bold' },
+  su: { color: '#fff', fontSize: 9 },
+  bt: { padding: 8, backgroundColor: '#1d2d50', borderRadius: 10 },
+  ro: { flexDirection: 'row', alignItems: 'center', margin: 20, marginBottom: 5 },
+  lb: { color: '#8892b0', fontSize: 13 },
+  mI: { color: '#FFD700', fontWeight: 'bold', marginLeft: 8, fontSize: 14, flex: 1 },
+  ca: { margin: 20, marginTop: 10, padding: 20, backgroundColor: '#112240', borderRadius: 15 },
+  ct: { color: '#FFD700', fontWeight: 'bold', fontSize: 14, marginBottom: 15 },
+  sl: { color: '#8892b0', fontSize: 11, marginTop: 10, marginBottom: 5 },
+  in: { backgroundColor: '#1d2d50', color: '#fff', padding: 12, borderRadius: 8, fontSize: 16 },
+  ad: { flexDirection: 'row', marginTop: 10, backgroundColor: '#0A192F', padding: 6, borderRadius: 6, alignSelf: 'flex-start', alignItems: 'center' },
+  at: { color: '#FFD700', fontSize: 10, marginLeft: 6, fontWeight:'bold' },
+  sum: { marginHorizontal: 20, padding: 25, borderRadius: 20, backgroundColor: '#1d2d50', borderLeftWidth: 5, borderLeftColor: '#FFD700', alignItems:'center' },
+  am: { color: '#fff', fontSize: 38, fontWeight: 'bold', marginTop: 5 },
+  st: { color: '#fff', fontSize: 16, fontWeight: 'bold', margin: 20 },
+  it: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: '#112240', marginHorizontal: 20, marginBottom: 12, borderRadius: 12 },
+  fo: { position: 'absolute', bottom: 20, width: '100%', flexDirection: 'row', justifyContent: 'center' },
+  ac: { alignItems:'center', marginHorizontal: 15 },
+  fb: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFD700', justifyContent: 'center', alignItems: 'center', elevation: 5 },
+  fl: { color: '#FFD700', fontSize: 9, marginTop: 8, fontWeight: 'bold' },
+  ov: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', padding: 20 },
+  mc: { backgroundColor: '#112240', borderRadius: 20, padding: 25 },
+  mh: { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:15 },
+  mi: { backgroundColor: '#1d2d50', color: '#fff', padding: 12, borderRadius: 10, marginBottom: 12 },
+  sb: { backgroundColor: '#FFD700', padding: 16, borderRadius: 12, marginTop: 15, alignItems: 'center' },
+  gb: { marginTop: 15, alignItems: 'center', paddingBottom: 10 },
+  ai: { backgroundColor: '#1d2d50', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  ol: { position:'absolute', top:0, left:0, right:0, bottom:0, backgroundColor:'rgba(10,25,47,0.95)', justifyContent:'center', alignItems:'center', zIndex:99 }
 });
