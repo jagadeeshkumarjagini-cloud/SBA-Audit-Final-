@@ -10,7 +10,8 @@
     "expo-sharing": "~11.10.0",
     "lucide-react-native": "0.344.0",
     "react": "18.2.0",
-    "react-native": "0.73.6"
+    "react-native": "0.73.6",
+    "react-native-svg": "14.1.0"
   },
   "private": true
 }
