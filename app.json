@@ -3,10 +3,7 @@
     "name": "SBA Accounts",
     "slug": "sba-audit-final-",
     "version": "1.0.0",
-    "orientation": "portrait",
     "icon": "./icon.png",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#0A192F",
     "android": {
       "package": "com.sba.audit.app",
       "versionCode": 1,
@@ -17,7 +14,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "PASTE_YOUR_NEW_PROJECT_ID_HERE"
+        "projectId": "955b8c7f-b71d-41ce-be15-670d57c423d7" 
       }
     }
   }
