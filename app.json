@@ -9,7 +9,6 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A192F",
     "sdkVersion": "50.0.0",
-    "platforms": ["ios", "android"],
     "android": {
       "package": "com.sba.audit.app",
       "versionCode": 2,
@@ -23,6 +22,10 @@
         "backgroundColor": "#0A192F"
       }
     },
+    "plugins": [
+      ["expo-camera", { "cameraPermission": "Allow SBA to scan bills." }],
+      ["expo-image-picker", { "photosPermission": "Allow SBA to save bill photos." }]
+    ],
     "extra": {
       "eas": {
         "projectId": "a3540e9a-b633-4186-b5cd-318fc4a7f4b7"
